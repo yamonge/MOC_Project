@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeStepDAO">
+
+    <!--
+        MyBatis INSERT 쿼리: tb_recipe_step 테이블에 레시피 단계를 저장합니다.
+        parameterType: com.cucook.moc.recipe.vo.RecipeStepVO (예시 VO 클래스 경로)
+    -->
+    <insert id="insertRecipeStep" parameterType="com.cucook.moc.recipe.vo.RecipeStepVO">
+
+        <!-- Oracle 시퀀스에서 다음 값을 가져와 VO 객체의 recipeStepId 필드에 설정 (INSERT 전에 실행) -->
+        <selectKey keyProperty="recipeStepId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe_step.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_recipe_step (
+        recipe_step_id,
+        recipe_id,
+        step_no,
+        step_desc,
+        image_url,
+        created_id
+        -- created_date는 테이블 정의에 따라 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{recipeStepId},
+        #{recipeId},
+        #{stepNo},
+        #{stepDesc},
+        #{imageUrl, jdbcType=VARCHAR},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="selectRecipeStepsByRecipeId" parameterType="long" resultType="com.cucook.moc.recipe.vo.RecipeStepVO">
+        SELECT
+            recipe_step_id as recipeStepId,
+            recipe_id as recipeId,
+            step_no as stepNo,
+            step_desc as stepDesc,
+            image_url as imageUrl,
+            created_id as createdId,
+            created_date as createdDate
+        FROM
+            tb_recipe_step
+        WHERE
+            recipe_id = #{recipeId}
+        ORDER BY
+            step_no ASC
+    </select>
+
+</mapper>

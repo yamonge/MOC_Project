@@ -1,0 +1,80 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.admin.dao.AdminUserReportDAO">
+
+    <!-- 유저 신고 목록 조회 -->
+    <select id="selectUserReportList"
+            parameterType="com.cucook.moc.admin.dto.request.AdminUserReportSearchRequestDTO"
+            resultType="com.cucook.moc.admin.vo.AdminUserReportVO">
+
+        SELECT
+        r.user_report_id        AS userReportId,
+        r.report_reason_cd      AS reportReasonCd,
+        r.processing_status_cd  AS processingStatusCd,
+        r.created_date          AS createdDate,
+
+        r.reporter_user_id      AS reporterUserId,
+        u1.user_nickname        AS reporterNickname,
+
+        r.reported_user_id      AS reportedUserId,
+        u2.user_nickname        AS reportedNickname,
+
+        r.report_comment        AS reportComment
+        FROM tb_user_report r
+        JOIN tb_user u1 ON u1.user_id = r.reporter_user_id
+        JOIN tb_user u2 ON u2.user_id = r.reported_user_id
+        WHERE 1=1
+        AND r.processing_status_cd = 'PENDING'
+
+        <if test="reasonCd != null and reasonCd != ''">
+            AND r.report_reason_cd = #{reasonCd}
+        </if>
+
+        <if test="statusCd != null and statusCd != '' and statusCd != 'ALL'">
+            AND r.processing_status_cd = #{statusCd}
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            u1.user_nickname LIKE '%' || #{keyword} || '%'
+            OR u2.user_nickname LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+
+        <if test="lastUserReportId != null">
+            AND r.user_report_id &lt; #{lastUserReportId}
+        </if>
+
+        ORDER BY r.user_report_id DESC
+        FETCH FIRST #{limit} ROWS ONLY
+    </select>
+
+    <!-- 신고 ID로 신고 정보 조회 (알림 전송용) -->
+    <select id="selectUserReportById"
+            parameterType="long"
+            resultType="com.cucook.moc.admin.vo.AdminUserReportVO">
+        SELECT
+            r.user_report_id        AS userReportId,
+            r.report_reason_cd      AS reportReasonCd,
+            r.processing_status_cd  AS processingStatusCd,
+            r.reporter_user_id      AS reporterUserId,
+            r.reported_user_id      AS reportedUserId,
+            r.report_comment        AS reportComment,
+            r.created_date          AS createdDate
+        FROM tb_user_report r
+        WHERE r.user_report_id = #{userReportId}
+    </select>
+
+    <!-- 유저 신고 처리 상태 업데이트 -->
+    <update id="updateUserReportStatus">
+        UPDATE tb_user_report
+        SET
+        processing_status_cd = #{statusCd},
+        processor_id         = #{processorId},
+        processed_date       = #{processedDate}
+        WHERE user_report_id = #{userReportId}
+    </update>
+
+
+</mapper>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.shopping.dao.ShoppingPostJoinDAO">
+
+    <!-- 참여 로직에서 사용할 VO 매핑 -->
+    <resultMap id="ShoppingPostResultMap" type="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        <id     property="shoppingPostId"   column="shopping_post_id"/>
+        <result property="writerUserId"     column="writer_user_id"/>
+        <result property="meetDatetime"     column="meet_datetime"/>
+        <result property="minPersonCnt"     column="min_person_cnt"/>
+        <result property="maxPersonCnt"     column="max_person_cnt"/>
+        <result property="currentPersonCnt" column="current_person_cnt"/>
+        <result property="description"      column="description"/>
+        <result property="statusCd"         column="status_cd"/>
+
+        <!-- 장소 정보 -->
+        <result property="placeName"        column="place_name"/>
+        <result property="placeAddress"     column="place_address"/>
+        <result property="latitude"         column="latitude"/>
+        <result property="longitude"        column="longitude"/>
+
+        <!-- 공통 이력 -->
+        <result property="createdId"        column="created_id"/>
+        <result property="createdDate"      column="created_date"/>
+        <result property="updatedId"        column="updated_id"/>
+        <result property="updatedDate"      column="updated_date"/>
+    </resultMap>
+
+    <!-- 참여 시, 게시글 락 걸고 조회 -->
+    <select id="selectPostForUpdate" resultType="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        SELECT
+        shopping_post_id   AS shoppingPostId,
+        writer_user_id     AS writerUserId,
+        meet_datetime      AS meetDatetime,
+        min_person_cnt     AS minPersonCnt,
+        max_person_cnt     AS maxPersonCnt,
+        current_person_cnt AS currentPersonCnt,
+        description        AS description,
+        status_cd          AS statusCd,
+        place_name         AS placeName,
+        place_address      AS placeAddress,
+        latitude           AS latitude,
+        longitude          AS longitude
+        FROM tb_shopping_post
+        WHERE shopping_post_id = #{postId}
+        FOR UPDATE
+    </select>
+
+    <!-- current_person_cnt + 1 -->
+    <update id="increaseCurrentPersonCnt">
+        UPDATE tb_shopping_post
+        SET current_person_cnt = current_person_cnt + 1
+        WHERE shopping_post_id = #{postId}
+    </update>
+
+    <!-- current_person_cnt - 1 -->
+    <update id="decreaseCurrentPersonCnt">
+        UPDATE tb_shopping_post
+        SET current_person_cnt = current_person_cnt - 1
+        WHERE shopping_post_id = #{postId}
+          AND current_person_cnt > 0
+    </update>
+
+    <!-- 게시글 ↔ 채팅방 매핑 -->
+    <select id="selectChatRoomIdByPostId" resultType="long">
+        SELECT chat_room_id
+        FROM tb_shopping_chat_room
+        WHERE shopping_post_id = #{postId}
+    </select>
+
+    <!-- 단건 조회용 (필요시 사용) -->
+    <select id="selectById" resultType="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        SELECT
+        shopping_post_id   AS shoppingPostId,
+        writer_user_id     AS writerUserId,
+        meet_datetime      AS meetDatetime,
+        min_person_cnt     AS minPersonCnt,
+        max_person_cnt     AS maxPersonCnt,
+        current_person_cnt AS currentPersonCnt,
+        description        AS description,
+        status_cd          AS statusCd
+        FROM tb_shopping_post
+        WHERE shopping_post_id = #{postId}
+    </select>
+
+</mapper>

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.shopping.dao.ShoppingPostDAO">
+
+    <!-- 기본 VO 매핑 -->
+    <resultMap id="ShoppingPostResultMap" type="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        <id     property="shoppingPostId"   column="shopping_post_id"/>
+        <result property="writerUserId"     column="writer_user_id"/>
+        <result property="meetDatetime"     column="meet_datetime"/>
+        <result property="minPersonCnt"     column="min_person_cnt"/>
+        <result property="maxPersonCnt"     column="max_person_cnt"/>
+        <result property="currentPersonCnt" column="current_person_cnt"/>
+        <result property="description"      column="description"/>
+        <result property="statusCd"         column="status_cd"/>
+
+        <!-- 장소 정보 (tb_shopping_post에 직접 존재) -->
+        <result property="placeName"        column="place_name"/>
+        <result property="placeAddress"     column="place_address"/>
+        <result property="latitude"         column="latitude"/>
+        <result property="longitude"        column="longitude"/>
+
+        <!-- 공통 이력 -->
+        <result property="createdId"        column="created_id"/>
+        <result property="createdDate"      column="created_date"/>
+        <result property="updatedId"        column="updated_id"/>
+        <result property="updatedDate"      column="updated_date"/>
+    </resultMap>
+
+    <!-- 게시글 INSERT -->
+    <insert id="insertPost" parameterType="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        <selectKey keyProperty="shoppingPostId" resultType="long" order="BEFORE">
+            SELECT seq_tb_shopping_post.NEXTVAL FROM dual
+        </selectKey>
+        INSERT INTO tb_shopping_post (
+        shopping_post_id,
+        writer_user_id,
+        meet_datetime,
+        min_person_cnt,
+        max_person_cnt,
+        current_person_cnt,
+        description,
+        status_cd,
+        place_name,
+        place_address,
+        latitude,
+        longitude,
+        created_id
+        ) VALUES (
+        #{shoppingPostId},
+        #{writerUserId},
+        #{meetDatetime},
+        #{minPersonCnt},
+        #{maxPersonCnt},
+        #{currentPersonCnt},
+        #{description},
+        #{statusCd},
+        #{placeName},
+        #{placeAddress},
+        #{latitude},
+        #{longitude},
+        #{createdId}
+        )
+    </insert>
+
+    <!-- 게시글 카테고리 INSERT -->
+    <!-- 게시글 카테고리 INSERT : 시퀀스를 SQL에서 직접 사용 -->
+    <insert id="insertPostCategory">
+        INSERT INTO tb_shopping_post_category (
+        shopping_post_category_id,
+        shopping_post_id,
+        category_cd
+        ) VALUES (
+        seq_tb_shopping_post_category.NEXTVAL,
+        #{shoppingPostId},
+        #{categoryCode}
+        )
+    </insert>
+
+    <!-- 주변 게시글 요약 DTO 매핑 -->
+    <resultMap id="ShoppingPostSummaryMap" type="com.cucook.moc.shopping.dto.ShoppingPostSummaryDTO">
+        <id     property="shoppingPostId"   column="shopping_post_id"/>
+        <result property="placeName"        column="place_name"/>
+        <result property="placeAddress"     column="place_address"/>
+        <result property="latitude"         column="latitude"/>
+        <result property="longitude"        column="longitude"/>
+        <result property="meetDatetime"     column="meet_datetime"/>
+        <result property="maxPersonCnt"     column="max_person_cnt"/>
+        <result property="currentPersonCnt" column="current_person_cnt"/>
+        <result property="statusCd"         column="status_cd"/>
+        <result property="writerNickname"   column="writer_nickname"/>
+    </resultMap>
+
+    <!-- 주변 게시글 목록 (맵 기준) -->
+    <select id="selectNearbyPosts" resultType="com.cucook.moc.shopping.dto.ShoppingPostSummaryDTO">
+        SELECT
+        sp.shopping_post_id            AS shoppingPostId,
+        sp.place_name                  AS placeName,
+        sp.place_address               AS placeAddress,
+        sp.latitude                    AS latitude,
+        sp.longitude                   AS longitude,
+        sp.meet_datetime               AS meetDatetime,
+        sp.max_person_cnt              AS maxPersonCnt,
+        sp.current_person_cnt          AS currentPersonCnt,
+        sp.status_cd                   AS statusCd,
+        sp.writer_user_id              AS writerUserId,
+        u.user_nickname                AS writerNickname,
+        sp.created_date                AS createdDate,
+        sp.description                 AS description,
+        (
+        SELECT LISTAGG(spc.category_cd, ',') WITHIN GROUP (ORDER BY spc.category_cd)
+        FROM tb_shopping_post_category spc
+        WHERE spc.shopping_post_id = sp.shopping_post_id
+        ) AS categoryCodesCsv,
+        (
+        6371000 * ACOS(
+        COS(#{centerLat} * 0.017453292519943295) * COS(sp.latitude * 0.017453292519943295)
+        * COS((sp.longitude - #{centerLng}) * 0.017453292519943295)
+        + SIN(#{centerLat} * 0.017453292519943295) * SIN(sp.latitude * 0.017453292519943295)
+        )
+        ) AS distanceMeters
+        FROM tb_shopping_post sp
+        LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id
+        WHERE sp.latitude BETWEEN #{latMin} AND #{latMax}
+        AND sp.longitude BETWEEN #{lngMin} AND #{lngMax}
+        ORDER BY sp.created_date DESC
+    </select>
+
+
+    <!-- 게시글 상세 DTO 매핑 -->
+    <resultMap id="ShoppingPostDetailMap" type="com.cucook.moc.shopping.dto.ShoppingPostDetailDTO">
+        <id     property="shoppingPostId"   column="shopping_post_id"/>
+        <result property="placeName"        column="place_name"/>
+        <result property="placeAddress"     column="place_address"/>
+        <result property="latitude"         column="latitude"/>
+        <result property="longitude"        column="longitude"/>
+        <result property="meetDatetime"     column="meet_datetime"/>
+        <result property="minPersonCnt"     column="min_person_cnt"/>
+        <result property="maxPersonCnt"     column="max_person_cnt"/>
+        <result property="currentPersonCnt" column="current_person_cnt"/>
+        <result property="description"      column="description"/>
+        <result property="statusCd"         column="status_cd"/>
+        <result property="writerNickname"   column="writer_nickname"/>
+    </resultMap>
+
+    <!-- 특정 마트(좌표) 기준 게시글 목록
+         (핀 하나의 좌표를 중심으로 작은 범위로 조회할 때 사용) -->
+    <select id="selectPostsByPlace" resultType="com.cucook.moc.shopping.dto.ShoppingPostSummaryDTO">
+        SELECT
+        sp.shopping_post_id            AS shoppingPostId,
+        sp.place_name                  AS placeName,
+        sp.place_address               AS placeAddress,
+        sp.latitude                    AS latitude,
+        sp.longitude                   AS longitude,
+        sp.meet_datetime               AS meetDatetime,
+        sp.max_person_cnt              AS maxPersonCnt,
+        sp.current_person_cnt          AS currentPersonCnt,
+        sp.status_cd                   AS statusCd,
+        sp.writer_user_id              AS writerUserId,
+        u.user_nickname                AS writerNickname,
+        sp.created_date                AS createdDate,
+        sp.description                 AS description,
+        (
+        SELECT LISTAGG(spc.category_cd, ',') WITHIN GROUP (ORDER BY spc.category_cd)
+        FROM tb_shopping_post_category spc
+        WHERE spc.shopping_post_id = sp.shopping_post_id
+        ) AS categoryCodesCsv,
+        0 AS distanceMeters,
+        CASE WHEN EXISTS (
+            SELECT 1
+            FROM tb_shopping_chat_room r
+            JOIN tb_shopping_participant p ON r.chat_room_id = p.chat_room_id
+            WHERE r.shopping_post_id = sp.shopping_post_id
+              AND p.user_id = #{userId}
+              AND p.leave_date IS NULL
+        ) THEN 1 ELSE 0 END AS isParticipated
+        FROM tb_shopping_post sp
+        LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id
+        WHERE sp.latitude BETWEEN #{latMin} AND #{latMax}
+        AND sp.longitude BETWEEN #{lngMin} AND #{lngMax}
+        AND sp.status_cd = 'OPEN'
+        ORDER BY sp.created_date DESC
+    </select>
+
+    <!-- 게시글 상세 -->
+    <select id="selectPostDetail" resultType="com.cucook.moc.shopping.dto.ShoppingPostDetailDTO">
+        SELECT
+        sp.shopping_post_id      AS shoppingPostId,
+        sp.writer_user_id        AS writerUserId,
+        u.user_nickname          AS writerNickname,
+        sp.place_name            AS placeName,
+        sp.place_address         AS placeAddress,
+        sp.latitude              AS latitude,
+        sp.longitude             AS longitude,
+        sp.meet_datetime         AS meetDatetime,
+        sp.min_person_cnt        AS minPersonCnt,
+        sp.max_person_cnt        AS maxPersonCnt,
+        sp.current_person_cnt    AS currentPersonCnt,
+        sp.status_cd             AS statusCd,
+        sp.description           AS description
+        FROM tb_shopping_post sp
+        LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id
+        WHERE sp.shopping_post_id = #{shoppingPostId}
+    </select>
+
+    <select id="selectCategoryCodesByPostId" resultType="string">
+        SELECT category_cd
+        FROM tb_shopping_post_category
+        WHERE shopping_post_id = #{shoppingPostId}
+        ORDER BY shopping_post_category_id ASC
+    </select>
+
+    <!-- VO 한 건 조회 (JOIN 없이) -->
+    <select id="selectById" resultType="com.cucook.moc.shopping.vo.ShoppingPostVO">
+        SELECT
+        shopping_post_id   AS shoppingPostId,
+        writer_user_id     AS writerUserId,
+        meet_datetime      AS meetDatetime,
+        min_person_cnt     AS minPersonCnt,
+        max_person_cnt     AS maxPersonCnt,
+        current_person_cnt AS currentPersonCnt,
+        description        AS description,
+        status_cd          AS statusCd,
+        place_name         AS placeName,
+        place_address      AS placeAddress,
+        latitude           AS latitude,
+        longitude          AS longitude,
+        created_id         AS createdId,
+        created_date       AS createdDate,
+        updated_id         AS updatedId,
+        updated_date       AS updatedDate
+        FROM tb_shopping_post
+        WHERE shopping_post_id = #{postId}
+    </select>
+
+    <!-- 게시글 작성자 조회 (방장 권한 검증용) -->
+    <select id="selectOwnerUserId" resultType="long">
+        SELECT writer_user_id
+        FROM tb_shopping_post
+        WHERE shopping_post_id = #{postId}
+    </select>
+
+    <!-- 게시글 상태 업데이트 -->
+    <update id="updateStatus">
+        UPDATE tb_shopping_post
+        SET status_cd = #{statusCd},
+            updated_date = SYSTIMESTAMP
+        WHERE shopping_post_id = #{postId}
+    </update>
+
+    <!-- 만료된 게시글 일괄 업데이트 (약속시간 지남) -->
+    <update id="bulkUpdateExpiredPosts">
+        UPDATE tb_shopping_post
+        SET status_cd = 'DONE',
+            updated_date = SYSTIMESTAMP
+        WHERE meet_datetime &lt; SYSTIMESTAMP
+          AND status_cd = 'OPEN'
+    </update>
+</mapper>

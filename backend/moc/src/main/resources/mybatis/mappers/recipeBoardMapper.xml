@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeBoardDAO">
+
+    <!-- 게시판 목록 Item 매핑 -->
+    <resultMap id="RecipeBoardListItemMap"
+               type="com.cucook.moc.recipe.vo.RecipeBoardListItemVO">
+
+        <id property="recipeId" column="recipe_id"/>
+
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="difficultyCd" column="difficulty_cd"/>
+        <result property="cookTimeMin" column="cook_time_min"/>
+        <result property="cuisineStyleCd" column="cuisine_style_cd"/>
+        <result property="category" column="category"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="likeCnt" column="like_cnt"/>
+        <result property="createdDate" column="created_date"/>
+        <result property="ingredientsString" column="ingredientsString"/>
+
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="authorNickname" column="user_nickname"/>
+        <result property="authorProfileImageUrl" column="user_profile_image_url"/>
+
+        <!-- 로그인 유저 기준 좋아요 여부 (0/1) -->
+        <result property="likedByMe" column="liked_by_me"/>
+    </resultMap>
+
+    <resultMap id="RecipeBoardVOMap"
+               type="com.cucook.moc.recipe.vo.RecipeVO">
+
+        <id property="recipeId" column="recipe_id"/>
+
+        <result property="title" column="title"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="externalRefId" column="external_ref_id"/>
+        <result property="summary" column="summary"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="difficultyCd" column="difficulty_cd"/>
+        <result property="cookTimeMin" column="cook_time_min"/>
+        <result property="cuisineStyleCd" column="cuisine_style_cd"/>
+        <result property="category" column="category"/>
+        <result property="isPublic" column="is_public"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="likeCnt" column="like_cnt"/>
+        <result property="reportCnt" column="report_cnt"/>
+        <result property="createdDate" column="created_date"/>
+        <result property="createdId" column="created_id"/>
+        <result property="updatedId" column="updated_id"/>
+        <result property="updatedDate" column="updated_date"/>
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="authorNickname" column="user_nickname"/>
+        <result property="authorProfileImageUrl" column="user_profile_image_url"/>
+
+        <!-- 로그인 유저 기준 좋아요 여부 (0/1) -->
+        <result property="likedByMe" column="liked_by_me"/>
+
+        <!-- 조리 순서 -->
+        <collection property="recipeSteps"
+                    ofType="com.cucook.moc.recipe.vo.RecipeStepVO">
+            <id property="recipeStepId" column="recipe_step_id"/>
+            <result property="recipeId" column="recipe_id"/>
+            <result property="stepNo" column="step_no"/>
+            <result property="stepDesc" column="step_desc"/>
+            <result property="createdId" column="step_created_id"/>
+            <result property="createdDate" column="step_created_date"/>
+        </collection>
+        <!-- 재료 -->
+        <collection property="recipeIngredients"
+                    ofType="com.cucook.moc.recipe.vo.RecipeIngredientVO">
+            <id property="recipeIngredientId" column="recipe_ingredient_id"/>
+            <result property="recipeId" column="recipe_id"/>
+            <result property="ingredientName" column="ingredient_name"/>
+            <result property="quantityDesc" column="quantity_desc"/>
+            <result property="isOwnedDefault" column="is_owned_default"/>
+            <result property="createdId" column="ingredient_created_id"/>
+            <result property="createdDate" column="ingredient_created_date"/>
+            <result property="updatedId" column="ingredient_updated_id"/>
+            <result property="updatedDate" column="ingredient_updated_date"/>
+        </collection>
+    </resultMap>
+
+    <!-- (A) 게시판 목록 조회 -->
+    <select id="selectPublicRecipes"
+            resultMap="RecipeBoardListItemMap">
+
+        SELECT
+        r.recipe_id,
+        r.title,
+        r.summary,
+        r.thumbnail_url,
+        r.difficulty_cd,
+        r.cook_time_min,
+        r.cuisine_style_cd,
+        r.category,
+        r.view_cnt,
+        r.like_cnt,
+        r.created_date,
+        r.owner_user_id,
+        u.user_nickname,
+        u.user_profile_image_url,
+        CASE
+        WHEN EXISTS (
+        SELECT 1
+        FROM tb_recipe_like l
+        WHERE l.recipe_id = r.recipe_id
+        AND l.user_id = #{loginUserId}
+        ) THEN 1
+        ELSE 0
+        END AS liked_by_me
+        FROM tb_recipe r
+        JOIN tb_user u
+        ON u.user_id = r.owner_user_id
+        WHERE r.is_public = 'Y'
+        AND r.is_deleted = 'N'
+
+        <if test="search != null and search != ''">
+            AND (
+            LOWER(r.title) LIKE '%' || LOWER(#{search}) || '%'
+            OR LOWER(r.summary) LIKE '%' || LOWER(#{search}) || '%'
+            )
+        </if>
+
+        <if test="cuisineStyleCd != null and cuisineStyleCd != ''">
+            AND r.cuisine_style_cd = #{cuisineStyleCd}
+        </if>
+
+        <if test="difficultyCd != null and difficultyCd != ''">
+            AND r.difficulty_cd = #{difficultyCd}
+        </if>
+
+        <if test="maxCookTimeMin != null">
+            AND r.cook_time_min &lt;= #{maxCookTimeMin}
+        </if>
+
+        <choose>
+            <when test="sort != null and sort == 'POPULAR'">
+                ORDER BY r.like_cnt DESC,
+                r.view_cnt DESC,
+                r.created_date DESC
+            </when>
+            <otherwise>
+                ORDER BY r.created_date DESC
+            </otherwise>
+        </choose>
+
+        OFFSET #{offset} ROWS
+        FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <!-- (B) 게시판 목록 카운트 -->
+    <select id="countPublicRecipes"
+            resultType="int">
+
+        SELECT COUNT(*)
+        FROM tb_recipe r
+        WHERE r.is_public = 'Y'
+        AND r.is_deleted = 'N'
+
+        <if test="search != null and search != ''">
+            AND (
+            LOWER(r.title) LIKE '%' || LOWER(#{search}) || '%'
+            OR LOWER(r.summary) LIKE '%' || LOWER(#{search}) || '%'
+            )
+        </if>
+
+        <if test="cuisineStyleCd != null and cuisineStyleCd != ''">
+            AND r.cuisine_style_cd = #{cuisineStyleCd}
+        </if>
+
+        <if test="difficultyCd != null and difficultyCd != ''">
+            AND r.difficulty_cd = #{difficultyCd}
+        </if>
+
+        <if test="maxCookTimeMin != null">
+            AND r.cook_time_min &lt;= #{maxCookTimeMin}
+        </if>
+    </select>
+
+    <select id="selectPublicRecipesOptimized"
+            resultMap="RecipeBoardListItemMap">
+
+        SELECT
+        /* ===== Recipe 기본 정보 ===== */
+        R.RECIPE_ID,
+        R.TITLE,
+        R.SUMMARY,
+        R.THUMBNAIL_URL,
+        R.DIFFICULTY_CD,
+        R.COOK_TIME_MIN,
+        R.CUISINE_STYLE_CD,
+        R.CATEGORY,
+        R.VIEW_CNT,
+        R.LIKE_CNT,
+        R.CREATED_DATE,
+        R.OWNER_USER_ID,
+
+        /* ===== 작성자 정보 ===== */
+        U.USER_NICKNAME,
+        U.USER_PROFILE_IMAGE_URL,
+
+        /* ===== 로그인 유저 기준 좋아요 여부 ===== */
+        CASE
+        WHEN EXISTS (
+        SELECT 1
+        FROM TB_RECIPE_LIKE L
+        WHERE L.RECIPE_ID = R.RECIPE_ID
+        AND L.USER_ID = #{loginUserId}
+        ) THEN 1
+        ELSE 0
+        END AS liked_by_me,
+
+        /* ===== 재료 문자열 집계 ===== */
+        LISTAGG(
+        I.INGREDIENT_NAME || '::' || NVL(I.QUANTITY_DESC, ''),
+        '||'
+        ) WITHIN GROUP (ORDER BY I.RECIPE_INGREDIENT_ID) AS ingredientsString
+
+        FROM TB_RECIPE R
+        JOIN TB_USER U
+        ON U.USER_ID = R.OWNER_USER_ID
+        LEFT JOIN TB_RECIPE_INGREDIENT I
+        ON I.RECIPE_ID = R.RECIPE_ID
+
+        WHERE R.IS_PUBLIC = 'Y'
+        AND R.IS_DELETED = 'N'
+
+        <!-- 🔍 검색어 (제목 / 요약 / 재료명) -->
+        <if test="search != null and search != ''">
+            AND (
+            LOWER(R.TITLE) LIKE '%' || LOWER(#{search}) || '%'
+            OR LOWER(R.SUMMARY) LIKE '%' || LOWER(#{search}) || '%'
+            OR LOWER(I.INGREDIENT_NAME) LIKE '%' || LOWER(#{search}) || '%'
+            )
+        </if>
+
+        <!-- 🍽 요리 스타일 -->
+        <if test="cuisineStyleCd != null and cuisineStyleCd != ''">
+            AND R.CUISINE_STYLE_CD = #{cuisineStyleCd}
+        </if>
+
+        <!-- ⭐ 난이도 -->
+        <if test="difficultyCd != null and difficultyCd != ''">
+            AND R.DIFFICULTY_CD = #{difficultyCd}
+        </if>
+
+        <!-- ⏱ 조리 시간 -->
+        <if test="maxCookTimeMin != null">
+            AND R.COOK_TIME_MIN <![CDATA[ <= ]]> #{maxCookTimeMin}
+        </if>
+
+        GROUP BY
+        R.RECIPE_ID,
+        R.TITLE,
+        R.SUMMARY,
+        R.THUMBNAIL_URL,
+        R.DIFFICULTY_CD,
+        R.COOK_TIME_MIN,
+        R.CUISINE_STYLE_CD,
+        R.CATEGORY,
+        R.VIEW_CNT,
+        R.LIKE_CNT,
+        R.CREATED_DATE,
+        R.OWNER_USER_ID,
+        U.USER_NICKNAME,
+        U.USER_PROFILE_IMAGE_URL
+
+        <choose>
+            <when test="sort != null and sort == 'POPULAR'">
+                ORDER BY R.LIKE_CNT DESC,
+                R.VIEW_CNT DESC,
+                R.CREATED_DATE DESC
+            </when>
+            <otherwise>
+                ORDER BY R.CREATED_DATE DESC
+            </otherwise>
+        </choose>
+
+        OFFSET #{offset} ROWS
+        FETCH NEXT #{limit} ROWS ONLY
+
+    </select>
+
+    <!-- (C) 게시판 상세 1건 -->
+    <select id="selectPublicRecipeById"
+            resultMap="RecipeBoardVOMap">
+
+        SELECT
+            r.recipe_id,
+            r.owner_user_id,
+            r.source_type,
+            r.title,
+            r.summary,
+            r.thumbnail_url,
+            r.difficulty_cd,
+            r.cook_time_min,
+            r.cuisine_style_cd,
+            r.category,
+            r.is_public,
+            r.is_deleted,
+            r.view_cnt,
+            r.like_cnt,
+            r.report_cnt,
+            r.created_id,
+            r.created_date,
+            r.updated_id,
+            r.updated_date,
+            u.user_nickname,
+            u.user_profile_image_url,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM tb_recipe_like l
+                    WHERE l.recipe_id = r.recipe_id
+                    AND l.user_id = #{loginUserId}
+                ) THEN 1
+                ELSE 0
+                END AS liked_by_me,
+            s.recipe_step_id,
+            s.step_no,
+            s.step_desc,
+            s.created_id   AS step_created_id,
+            s.created_date AS step_created_date,
+            i.recipe_ingredient_id,
+            i.ingredient_name,
+            i.quantity_desc,
+            i.is_owned_default,
+            i.created_id   AS ingredient_created_id,
+            i.created_date AS ingredient_created_date,
+            i.updated_id   AS ingredient_updated_id,
+            i.updated_date AS ingredient_updated_date
+        FROM tb_recipe r
+                 JOIN tb_user u
+                      ON u.user_id = r.owner_user_id
+                 LEFT JOIN tb_recipe_step s
+                           ON s.recipe_id = r.recipe_id
+                 LEFT JOIN tb_recipe_ingredient i
+                           ON i.recipe_id = r.recipe_id
+        WHERE r.recipe_id = #{recipeId}
+          AND r.is_public = 'Y'
+          AND r.is_deleted = 'N'
+        ORDER BY s.step_no, i.recipe_ingredient_id
+    </select>
+
+</mapper>

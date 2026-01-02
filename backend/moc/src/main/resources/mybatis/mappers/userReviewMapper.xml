@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.user.dao.UserReviewDAO">
+
+    <!-- VO 매핑 -->
+    <resultMap id="UserReviewResultMap" type="com.cucook.moc.user.vo.UserReviewVO">
+        <id     property="userReviewId"       column="user_review_id"/>
+        <result property="targetUserId"       column="target_user_id"/>
+        <result property="writerUserId"       column="writer_user_id"/>
+        <result property="shoppingPostId"     column="shopping_post_id"/>
+        <result property="rating"             column="rating"/>
+        <result property="userReviewComment"  column="user_review_comment"/>
+        <result property="createdDate"        column="created_date"/>
+    </resultMap>
+
+    <!-- 리뷰 INSERT -->
+    <insert id="insertUserReview"
+            parameterType="com.cucook.moc.user.vo.UserReviewVO">
+        <selectKey keyProperty="userReviewId"
+                   resultType="long"
+                   order="BEFORE">
+            SELECT seq_tb_user_review.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_user_review (
+        user_review_id,
+        target_user_id,
+        writer_user_id,
+        shopping_post_id,
+        rating,
+        user_review_comment
+        -- created_date는 테이블 정의에 따라 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{userReviewId},
+        #{targetUserId},
+        #{writerUserId},
+        #{shoppingPostId},
+        #{rating},
+        #{userReviewComment}
+        )
+    </insert>
+
+    <!--        MyBatis SELECT 쿼리: 특정 사용자가 '받은' 모든 후기 목록을 조회합니다.
+        (마이페이지 '받은 후기 목록' 탭 표시용)
+        parameterType: long
+        resultMap: UserReviewResultMap
+    -->
+    <select id="selectReceivedUserReviewsByUserId" parameterType="long" resultMap="UserReviewResultMap">
+        SELECT
+            user_review_id,
+            target_user_id,
+            writer_user_id,
+            shopping_post_id,
+            rating,
+            user_review_comment,
+            created_date
+        FROM
+            tb_user_review
+        WHERE
+            target_user_id = #{targetUserId}
+        ORDER BY
+            created_date DESC
+    </select>
+
+    <!--        MyBatis SELECT 쿼리: 특정 장보기 게시글(shopping_post_id)에 대해
+        특정 작성자(writer_user_id)가 특정 대상(target_user_id)에게 후기를 남겼는지 확인합니다.
+        (UNIQUE INDEX uq_user_review_unique 제약조건 검사 및 중복 후기 방지용)
+        parameterType: Map
+        resultType: int (0 또는 1)
+    -->
+    <select id="checkIfUserReviewExists" parameterType="map" resultType="int">
+        SELECT
+            COUNT(user_review_id)
+        FROM
+            tb_user_review
+        WHERE
+            target_user_id = #{targetUserId}
+          AND writer_user_id = #{writerUserId}
+          AND shopping_post_id = #{shoppingPostId}
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 후기 ID로 단일 후기 정보를 조회합니다.
+        (관리자/개발자용 또는 후기 수정/삭제 전 존재 여부 확인용)
+        parameterType: long
+        resultMap: UserReviewResultMap
+    -->
+    <select id="selectUserReviewById" parameterType="long" resultMap="UserReviewResultMap">
+        SELECT
+            user_review_id,
+            target_user_id,
+            writer_user_id,
+            shopping_post_id,
+            rating,
+            user_review_comment,
+            created_date
+        FROM
+            tb_user_review
+        WHERE
+            user_review_id = #{userReviewId}
+    </select>
+
+    <!--
+        MyBatis UPDATE 쿼리: 특정 후기 정보를 수정합니다.
+        (관리자 또는 후기 작성자가 자신의 후기를 수정할 때 사용)
+        parameterType: com.cucook.moc.user.vo.UserReviewVO
+    -->
+    <update id="updateUserReview" parameterType="com.cucook.moc.user.vo.UserReviewVO">
+        UPDATE tb_user_review
+        <set>
+            <if test="rating != null">
+                rating = #{rating},
+            </if>
+            <if test="userReviewComment != null">
+                user_review_comment = #{userReviewComment},
+            </if>
+        </set>
+        WHERE
+        user_review_id = #{userReviewId}
+        AND writer_user_id = #{writerUserId} -- 후기 작성자만 수정 가능하도록 권한 확인
+    </update>
+
+    <!--
+        MyBatis DELETE 쿼리: 특정 후기 정보를 삭제합니다.
+        (관리자 또는 후기 작성자가 자신의 후기를 삭제할 때 사용)
+        parameterType: Map
+    -->
+    <delete id="deleteUserReview" parameterType="map">
+        DELETE FROM tb_user_review
+        WHERE user_review_id = #{userReviewId}
+          AND writer_user_id = #{writerUserId} -- 후기 작성자만 삭제 가능하도록 권한 확인
+    </delete>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 유저가 받은 후기 개수 조회
+        (프로필에서 사용)
+        parameterType: long
+        resultType: int
+    -->
+    <select id="countReceivedUserReviewsByUserId" parameterType="long" resultType="int">
+        SELECT COUNT(user_review_id)
+        FROM tb_user_review
+        WHERE target_user_id = #{targetUserId}
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 유저(타겟)를 대상으로 한 리뷰 목록 조회
+        (프로필 바텀시트에서 사용)
+        resultType: com.cucook.moc.user.dto.UserReviewDTO
+    -->
+    <select id="selectReviewsForUser" parameterType="long" resultType="com.cucook.moc.user.dto.UserReviewDTO">
+        SELECT
+            ur.user_review_id AS userReviewId,
+            ur.target_user_id AS targetUserId,
+            ur.writer_user_id AS writerUserId,
+            u.user_nickname AS writerNickname,
+            u.user_profile_image_url AS writerProfileImageUrl,
+            ur.shopping_post_id AS shoppingPostId,
+            ur.rating,
+            ur.user_review_comment AS "comment",
+            ur.created_date AS createdDate
+        FROM
+            tb_user_review ur
+        JOIN
+            tb_user u ON ur.writer_user_id = u.user_id
+        WHERE
+            ur.target_user_id = #{targetUserId}
+        ORDER BY
+            ur.created_date DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,87 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 위치 제공 권한 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- (백그라운드 위치가 필요하면 나중에
+         <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+         도 추가 가능) -->
+
+    <!-- 카메라 권한 -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    
+    <!-- 갤러리 권한 (Android 13 이상) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    
+    <!-- 갤러리 권한 (Android 12 이하) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" 
+        tools:replace="android:maxSdkVersion" />
+    
+    <!-- 알림 권한 (Android 13 이상) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- 음성 녹음 권한 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme"
+      android:supportsRtl="true"
+      android:usesCleartextTraffic="true">
+      
+      <!-- Naver Map Client ID -->
+      <meta-data
+          android:name="com.naver.maps.map.NCP_KEY_ID"
+          android:value="28n51run07" />
+      
+      <!-- Facebook SDK -->
+      <meta-data
+          android:name="com.facebook.sdk.ApplicationId"
+          android:value="@string/facebook_app_id"/>
+      
+      <meta-data
+          android:name="com.facebook.sdk.ClientToken"
+          android:value="@string/facebook_client_token"/>
+      
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustNothing"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+      
+      <!-- Facebook Activity -->
+      <activity 
+          android:name="com.facebook.FacebookActivity"
+          android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+          android:label="@string/app_name" />
+          
+      <activity
+          android:name="com.facebook.CustomTabActivity"
+          android:exported="true">
+          <intent-filter>
+              <action android:name="android.intent.action.VIEW" />
+              <category android:name="android.intent.category.DEFAULT" />
+              <category android:name="android.intent.category.BROWSABLE" />
+              <data android:scheme="@string/fb_login_protocol_scheme" />
+          </intent-filter>
+      </activity>
+    </application>
+</manifest>

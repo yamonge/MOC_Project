@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.user.dao.UserIngredientDAO">
+
+    <resultMap id="UserIngredientResultMap" type="com.cucook.moc.user.vo.UserIngredientVO">
+        <id     property="userIngredientId" column="user_ingredient_id"/>
+        <result property="userId"           column="user_id"/>
+        <result property="ingredientName"   column="ingredient_name"/>
+        <result property="quantityDesc"     column="quantity_desc"/>
+        <result property="categoryCd"       column="category_cd"/>
+        <result property="usedFlag"         column="used_flag"/>
+        <result property="memo"             column="memo"/>
+        <result property="createdId"        column="created_id"/>
+        <result property="createdDate"      column="created_date"/>
+        <result property="updatedId"        column="updated_id"/>
+        <result property="updatedDate"      column="updated_date"/>
+    </resultMap>
+
+    <insert id="insertUserIngredient" parameterType="com.cucook.moc.user.vo.UserIngredientVO">
+        <selectKey keyProperty="userIngredientId" resultType="long" order="BEFORE">
+            SELECT seq_tb_user_ingredient.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_user_ingredient (
+        user_ingredient_id,
+        user_id,
+        ingredient_name,
+        quantity_desc,
+        category_cd,
+        used_flag,
+        memo,
+        created_id
+        ) VALUES (
+        #{userIngredientId},
+        #{userId},
+        #{ingredientName},
+        #{quantityDesc, jdbcType=VARCHAR},
+        #{categoryCd, jdbcType=VARCHAR},
+        NVL(#{usedFlag, jdbcType=VARCHAR}, 'N'),
+        #{memo, jdbcType=VARCHAR},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="selectUserIngredientsByUserId" parameterType="long" resultMap="UserIngredientResultMap">
+        SELECT
+        user_ingredient_id,
+        user_id,
+        ingredient_name,
+        quantity_desc,
+        category_cd,
+        used_flag,
+        memo,
+        created_id,
+        created_date,
+        updated_id,
+        updated_date
+        FROM tb_user_ingredient
+        WHERE user_id = #{value}
+        ORDER BY ingredient_name ASC
+    </select>
+
+    <select id="selectUserIngredientById" parameterType="long" resultMap="UserIngredientResultMap">
+        SELECT
+        user_ingredient_id,
+        user_id,
+        ingredient_name,
+        quantity_desc,
+        category_cd,
+        used_flag,
+        memo,
+        created_id,
+        created_date,
+        updated_id,
+        updated_date
+        FROM tb_user_ingredient
+        WHERE user_ingredient_id = #{value}
+    </select>
+
+    <update id="updateUserIngredient" parameterType="com.cucook.moc.user.vo.UserIngredientVO">
+        UPDATE tb_user_ingredient
+        <set>
+            <if test="ingredientName != null and ingredientName != ''">
+                ingredient_name = #{ingredientName},
+            </if>
+            <if test="quantityDesc != null and quantityDesc != ''">
+                quantity_desc = #{quantityDesc},
+            </if>
+            <if test="categoryCd != null and categoryCd != ''">
+                category_cd = #{categoryCd},
+            </if>
+            <if test="usedFlag != null and usedFlag != ''">
+                used_flag = #{usedFlag},
+            </if>
+            <if test="memo != null">
+                memo = #{memo},
+            </if>
+            <if test="updatedId != null">
+                updated_id = #{updatedId},
+            </if>
+            updated_date = SYSTIMESTAMP
+        </set>
+        WHERE user_ingredient_id = #{userIngredientId}
+    </update>
+<!--    마이페이지삭제용-->
+    <delete id="deleteUserIngredient" parameterType="long">
+        DELETE FROM tb_user_ingredient
+        WHERE user_ingredient_id = #{value}
+    </delete>
+
+    <select id="findIdByUserIdAndIngredientName" resultType="long">
+        SELECT user_ingredient_id
+        FROM tb_user_ingredient
+        WHERE user_id = #{userId}
+        AND ingredient_name = #{ingredientName}
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+<!--    레시피로 소비 삭제용-->
+    <delete id="deleteUserIngredientByUserAndId">
+        DELETE FROM tb_user_ingredient
+        WHERE user_id = #{userId}
+          AND user_ingredient_id = #{userIngredientId}
+    </delete>
+
+    <!-- 중복 체크용: 사용자 ID와 재료명으로 기존 재료 조회 -->
+    <select id="selectByUserIdAndIngredientName" resultMap="UserIngredientResultMap">
+        SELECT
+            user_ingredient_id,
+            user_id,
+            ingredient_name,
+            quantity_desc,
+            category_cd,
+            used_flag,
+            memo,
+            created_id,
+            created_date,
+            updated_id,
+            updated_date
+        FROM tb_user_ingredient
+        WHERE user_id = #{userId}
+          AND LOWER(TRIM(ingredient_name)) = LOWER(TRIM(#{ingredientName}))
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+</mapper>

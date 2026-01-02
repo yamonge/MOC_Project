@@ -1,0 +1,74 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.admin.dao.AdminUserDAO">
+
+    <!-- 회원 목록: 일반 유저(user_type='N')만. cursor 기반(lastUserId + limit) -->
+    <select id="selectAdminUserList"
+            parameterType="com.cucook.moc.admin.dto.request.AdminUserSearchRequestDTO"
+            resultType="com.cucook.moc.admin.vo.AdminUserVO">
+
+        SELECT
+        u.user_id          AS userId,
+        u.user_email       AS userEmail,
+        u.user_name        AS userName,
+        u.user_nickname    AS userNickname,
+        u.user_type        AS userType,
+        u.user_status      AS userStatus,
+        u.reported_cnt     AS reportedCnt,
+        u.suspended_until  AS suspendedUntil,
+        u.suspended_reason AS suspendedReason,
+        u.created_date     AS createdDate
+        FROM tb_user u
+        WHERE 1=1
+        AND u.user_type = 'N'
+        AND u.user_status != 'WITHDRAW'   <!-- 추가: 탈퇴 유저는 목록에서 제외 -->
+        
+        <if test="keyword != null and keyword != ''">
+            AND (u.user_email    LIKE '%' || #{keyword} || '%'
+            OR  u.user_nickname LIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="status != null and status != '' and status != 'ALL'">
+            AND u.user_status = #{status}
+        </if>
+        <if test="lastUserId != null">
+            AND u.user_id &lt; #{lastUserId}
+        </if>
+        ORDER BY u.user_id DESC
+        <if test="limit != null">
+            FETCH FIRST #{limit} ROWS ONLY
+        </if>
+    </select>
+
+    <!-- 단일 회원 조회 -->
+    <select id="selectAdminUserById"
+            parameterType="long"
+            resultType="com.cucook.moc.admin.vo.AdminUserVO">
+        SELECT
+        u.user_id          AS userId,
+        u.user_email       AS userEmail,
+        u.user_name        AS userName,
+        u.user_nickname    AS userNickname,
+        u.user_type        AS userType,
+        u.user_status      AS userStatus,
+        u.reported_cnt     AS reportedCnt,
+        u.suspended_until  AS suspendedUntil,
+        u.suspended_reason AS suspendedReason,
+        u.created_date     AS createdDate
+        FROM tb_user u
+        WHERE u.user_id = #{userId}
+    </select>
+
+    <!-- 상태 변경 (정지/해제/탈퇴 공통) -->
+    <update id="updateUserStatus">
+        UPDATE tb_user
+        SET
+        user_status      = #{userStatus},
+        suspended_until  = #{suspendedUntil, jdbcType=TIMESTAMP},
+        suspended_reason = #{suspendedReason, jdbcType=VARCHAR},
+        updated_id       = #{adminUserId},
+        updated_date     = SYSTIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

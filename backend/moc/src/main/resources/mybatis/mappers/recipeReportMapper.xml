@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeReportDAO">
+
+    <!-- RecipeReportVO와 tb_recipe_report 테이블 컬럼 매핑을 위한 ResultMap -->
+    <resultMap id="RecipeReportResultMap" type="com.cucook.moc.recipe.vo.RecipeReportVO">
+        <id     property="reportId"       column="recipe_report_id"/>
+        <result property="recipeId"       column="recipe_id"/>
+        <result property="reporterUserId" column="reporter_user_id"/>
+        <result property="reporterNickname" column="reporter_nickname"/>
+        <result property="reportReasonCd" column="report_reason_cd"/>
+        <result property="content"        column="content"/>
+        <result property="statusCd"       column="status_cd"/>
+        <result property="createdId"      column="created_id"/>
+        <result property="createdDate"    column="created_date"/>
+        <result property="updatedId"      column="updated_id"/>
+        <result property="updatedDate"    column="updated_date"/>
+    </resultMap>
+
+    <!--
+        마이페이지 '내가 신고한 내역' (레시피)을 위한 SELECT 쿼리:
+        특정 사용자가 '신고한' 모든 레시피 신고 목록을 조회합니다.
+        (reporter_user_id가 현재 로그인한 userId와 일치하는 신고)
+        parameterType: long (조회할 사용자의 ID = reporter_user_id)
+        resultMap: RecipeReportResultMap
+        (향후 tb_recipe와 조인하여 신고된 레시피 정보(제목, 썸네일)를 포함할 수 있음)
+    -->
+    <select id="selectReportedRecipesByReporterUserId" parameterType="long" resultMap="RecipeReportResultMap">
+        SELECT
+            r.recipe_report_id,
+            r.recipe_id,
+            r.reporter_user_id,
+            u.user_nickname AS reporter_nickname,
+            r.report_reason_cd,
+            r.content,
+            r.status_cd,
+            r.created_id,
+            r.created_date,
+            r.updated_id,
+            r.updated_date
+        FROM
+            tb_recipe_report r
+            LEFT JOIN tb_user u ON u.user_id = r.reporter_user_id
+            LEFT JOIN tb_recipe rec ON rec.recipe_id = r.recipe_id
+        WHERE
+            r.reporter_user_id = #{reporterUserId}
+            AND r.status_cd = 'PENDING'
+            AND (rec.is_deleted IS NULL OR rec.is_deleted = 'N')
+        ORDER BY
+            r.created_date DESC -- 최신 신고일 순으로 정렬
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 사용자가 '신고한' 레시피 신고의 총 개수를 조회합니다.
+        (마이페이지 '신고 내역' 카드에 표시용)
+        parameterType: long (조회할 사용자의 ID = reporter_user_id)
+        resultType: int
+    -->
+    <select id="countReportedRecipesByReporterUserId" parameterType="long" resultType="int">
+        SELECT
+            COUNT(recipe_report_id)
+        FROM
+            tb_recipe_report
+        WHERE
+            reporter_user_id = #{reporterUserId}
+    </select>
+
+    <!--
+        MyBatis INSERT 쿼리: tb_recipe_report 테이블에 레시피 신고 정보를 저장합니다.
+        (레시피 상세 화면에서 '신고하기' 버튼 클릭 시 사용)
+        parameterType: com.cucook.moc.recipe.vo.RecipeReportVO
+    -->
+    <insert id="insertRecipeReport" parameterType="com.cucook.moc.recipe.vo.RecipeReportVO">
+        <selectKey keyProperty="reportId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe_report.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_recipe_report (
+        recipe_report_id,
+        recipe_id,
+        reporter_user_id,
+        report_reason_cd,
+        content,
+        status_cd,
+        created_id
+        -- created_date, updated_date는 DDL에 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{reportId},
+        #{recipeId},
+        #{reporterUserId},
+        #{reportReasonCd},
+        #{content, jdbcType=VARCHAR},
+        NVL(#{statusCd, jdbcType=VARCHAR}, 'PENDING'), -- NULL일 경우 'PENDING' 기본값
+        #{createdId}
+        )
+    </insert>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 레시피와 특정 사용자의 신고 기록이 이미 존재하는지 확인합니다.
+        (중복 신고 방지용)
+        parameterType: Map
+        resultType: int (0 또는 1)
+    -->
+    <select id="checkIfRecipeReportExists" parameterType="map" resultType="int">
+        SELECT
+            COUNT(recipe_report_id)
+        FROM
+            tb_recipe_report
+        WHERE
+            recipe_id = #{recipeId}
+          AND reporter_user_id = #{reporterUserId}
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 레시피 신고 ID로 단일 신고 정보를 조회합니다.
+        (관리자/개발자용 또는 수정/삭제 전 존재 여부 확인용)
+        parameterType: long
+        resultMap: RecipeReportResultMap
+    -->
+    <select id="selectRecipeReportById" parameterType="long" resultMap="RecipeReportResultMap">
+        SELECT
+            recipe_report_id,
+            recipe_id,
+            reporter_user_id,
+            report_reason_cd,
+            content,
+            status_cd,
+            created_id,
+            created_date,
+            updated_id,
+            updated_date
+        FROM
+            tb_recipe_report
+        WHERE
+            recipe_report_id = #{reportId}
+    </select>
+
+    <!--
+        MyBatis UPDATE 쿼리: 특정 레시피 신고 정보를 수정합니다.
+        (관리자만 수정 가능하거나, 내용 수정만 가능하도록 비즈니스 로직에서 제어)
+        parameterType: com.cucook.moc.recipe.vo.RecipeReportVO
+    -->
+    <update id="updateRecipeReport" parameterType="com.cucook.moc.recipe.vo.RecipeReportVO">
+        UPDATE tb_recipe_report
+        <set>
+            <if test="reportReasonCd != null and reportReasonCd != ''">
+                report_reason_cd = #{reportReasonCd},
+            </if>
+            <if test="content != null">
+                content = #{content},
+            </if>
+            <if test="statusCd != null and statusCd != ''">
+                status_cd = #{statusCd}, -- 관리자만 변경 가능하도록 서비스에서 제어
+            </if>
+            <if test="updatedId != null">
+                updated_id = #{updatedId},
+            </if>
+            updated_date = SYSTIMESTAMP
+        </set>
+        WHERE
+        recipe_report_id = #{reportId}
+        AND reporter_user_id = #{reporterUserId} -- 신고한 사용자 본인만 수정 가능하도록 (정책에 따라)
+    </update>
+
+    <!--
+        MyBatis DELETE 쿼리: 특정 레시피 신고 기록을 삭제합니다.
+        (관리자 또는 신고한 사용자 본인이 삭제할 때 사용)
+        parameterType: Map
+    -->
+    <delete id="deleteRecipeReport" parameterType="map">
+        DELETE FROM tb_recipe_report
+        WHERE recipe_report_id = #{reportId}
+          AND reporter_user_id = #{reporterUserId} -- 신고한 사용자 본인만 삭제 가능하도록 권한 확인
+    </delete>
+
+    <!-- 
+        레시피 신고 상태 업데이트 (관리자용)
+    -->
+    <update id="updateRecipeReportStatus">
+        UPDATE tb_recipe_report
+        SET status_cd = #{statusCd},
+            updated_date = SYSTIMESTAMP
+        WHERE recipe_report_id = #{recipeReportId}
+    </update>
+
+</mapper>

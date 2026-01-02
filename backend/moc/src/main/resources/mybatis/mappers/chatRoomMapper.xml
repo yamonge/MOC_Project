@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.chat.dao.ChatRoomDAO">
+
+    <resultMap id="ChatRoomResultMap" type="com.cucook.moc.chat.vo.ChatRoomVO">
+        <id     property="chatRoomId"     column="chat_room_id"/>
+        <result property="shoppingPostId" column="shopping_post_id"/>
+        <result property="statusCd"       column="status_cd"/>
+        <result property="createdAt"    column="created_date"/>
+        <result property="updatedAt"    column="updated_date"/>
+    </resultMap>
+
+    <!-- 채팅방 생성 -->
+    <insert id="insertChatRoom"
+            parameterType="com.cucook.moc.chat.vo.ChatRoomVO">
+        <selectKey keyProperty="chatRoomId"
+                   resultType="long"
+                   order="BEFORE">
+            SELECT seq_tb_shopping_chat_room.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_shopping_chat_room (
+            chat_room_id,
+            shopping_post_id,
+            status_cd,
+            created_date,
+            updated_date
+        ) VALUES (
+            #{chatRoomId},
+            #{shoppingPostId},
+            #{statusCd},
+            SYSTIMESTAMP,
+            SYSTIMESTAMP
+        )
+    </insert>
+
+    <!-- 게시글 기준 채팅방 ID 조회 -->
+    <select id="selectChatRoomIdByPost"
+            parameterType="long"
+            resultType="long">
+        SELECT chat_room_id
+        FROM tb_shopping_chat_room
+        WHERE shopping_post_id = #{shoppingPostId}
+    </select>
+
+    <!-- 내 채팅방 목록 요약 -->
+    <resultMap id="ChatRoomSummaryMap" type="com.cucook.moc.chat.dto.ChatRoomSummaryDTO">
+        <id     property="chatRoomId"     column="chat_room_id"/>
+        <result property="shoppingPostId" column="shopping_post_id"/>
+        <result property="hostUserId"     column="host_user_id"/>
+        <result property="placeName"      column="place_name"/>
+        <result property="lastMessage"    column="last_message"/>
+        <result property="statusCd"       column="status_cd"/>
+        <result property="updatedAt"      column="updated_at"/>
+        <!-- unreadCount, lastSenderNickname은 추후 확장 -->
+    </resultMap>
+
+    <select id="selectRoomsByUser"
+            parameterType="long"
+            resultMap="ChatRoomSummaryMap">
+        SELECT
+            r.chat_room_id,
+            r.shopping_post_id,
+            sp.writer_user_id AS host_user_id,
+            sp.place_name,
+            -- 마지막 메시지 텍스트
+            (
+              SELECT m.message_text
+              FROM tb_shopping_chat_message m
+              WHERE m.chat_room_id = r.chat_room_id
+              ORDER BY m.sent_date DESC
+              FETCH FIRST 1 ROWS ONLY
+            ) AS last_message,
+            r.status_cd,
+            r.updated_date AS updated_at
+        FROM tb_shopping_chat_room r
+        JOIN tb_shopping_post sp
+          ON r.shopping_post_id = sp.shopping_post_id
+        JOIN tb_shopping_participant p
+          ON p.chat_room_id = r.chat_room_id
+        WHERE p.user_id = #{userId}
+          AND p.leave_date IS NULL
+        ORDER BY updated_at DESC
+    </select>
+
+    <!-- 채팅방 ID로 조회 -->
+    <select id="selectById"
+            parameterType="long"
+            resultMap="ChatRoomResultMap">
+        SELECT
+            chat_room_id,
+            shopping_post_id,
+            status_cd,
+            created_date,
+            updated_date
+        FROM tb_shopping_chat_room
+        WHERE chat_room_id = #{chatRoomId}
+    </select>
+
+    <!-- 채팅방 상태 업데이트 -->
+    <update id="updateStatus">
+        UPDATE tb_shopping_chat_room
+        SET status_cd = #{statusCd},
+            updated_date = SYSTIMESTAMP
+        WHERE chat_room_id = #{chatRoomId}
+    </update>
+
+    <!-- 만료된 채팅방 일괄 업데이트 (약속시간 지남 게시글에 매핑된 채팅방) -->
+    <update id="bulkUpdateExpiredRooms">
+        UPDATE tb_shopping_chat_room r
+        SET r.status_cd = 'DONE',
+            r.updated_date = SYSTIMESTAMP
+        WHERE r.status_cd = 'OPEN'
+          AND EXISTS (
+              SELECT 1
+              FROM tb_shopping_post p
+              WHERE p.shopping_post_id = r.shopping_post_id
+                AND p.status_cd = 'DONE'
+          )
+    </update>
+
+</mapper>

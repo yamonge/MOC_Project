@@ -1,0 +1,4 @@
+/.idea
+*.yml
+*.properties
+backend/moc/src/main/resources/application.yml

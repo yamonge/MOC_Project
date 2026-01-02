@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.AiRecipeLogDAO">
+    <insert id="insertAiRecipeLog" parameterType="com.cucook.moc.recipe.vo.AiRecipeLogVO">
+
+        <!-- Oracle 시퀀스에서 다음 값을 가져와 VO 객체의 aiRecipeLogId 필드에 설정 (INSERT 전에 실행) -->
+        <selectKey keyProperty="aiRecipeLogId" resultType="java.lang.Long" order="BEFORE">
+            SELECT seq_tb_ai_recipe_log.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_ai_recipe_log (
+        ai_recipe_log_id,
+        user_id,
+        base_source_cd,
+        camera_session_id,
+        manual_ingredients,
+        filter_cuisine_cd,
+        filter_diff_cd,
+        filter_time_cd,
+        gov_api_raw,
+        ai_request,
+        ai_response,
+        result_cnt,
+        created_id
+        -- created_date는 테이블 정의에 따라 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{aiRecipeLogId},
+        #{userId},
+        #{baseSourceCd},
+        #{cameraSessionId, jdbcType=VARCHAR},
+        #{manualIngredients},
+        #{filterCuisineCd},
+        #{filterDiffCd},
+        #{filterTimeCd},
+        #{govApiRaw},
+        #{aiRequest},
+        #{aiResponse},
+        #{resultCnt, jdbcType=NUMERIC},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="searchAiRecipeLogs" parameterType="com.cucook.moc.recipe.vo.AiRecipeLogVO" resultType="com.cucook.moc.recipe.vo.AiRecipeLogVO">
+        SELECT
+        ai_recipe_log_id as aiRecipeLigId,
+        user_id as userId,
+        base_source_cd as baseSourceCd,
+        camera_session_id as cameraSessionId,
+        manual_ingredients as manualIngredients,
+        filter_cuisine_cd as filterCuisineCd,
+        filter_diff_cd as filterDiffCd,
+        filter_time_cd as filterTimeCd,
+        gov_api_raw as govApiRaw,
+        ai_request as aiRequest,
+        ai_response as aiResponse,
+        result_cnt as resultCnt,
+        created_id as createdId,
+        created_date as createdDate
+        FROM
+        tb_ai_recipe_log
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="manualIngredients != null and manualIngredients != ''">
+                AND manual_ingredients LIKE '%' || #{manualIngredients} || '%'
+            </if>
+            <if test="filterCuisineCd != null and filterCuisineCd != ''">
+                AND filter_cuisine_cd = #{filterCuisineCd}
+            </if>
+            <if test="filterDiffCd != null and filterDiffCd != ''">
+                AND filter_diff_cd = #{filterDiffCd}
+            </if>
+            <if test="filterTimeCd != null and filterTimeCd != ''">
+                AND filter_time_cd = #{filterTimeCd}
+            </if>
+        </where>
+        ORDER BY created_date DESC
+    </select>
+
+</mapper>

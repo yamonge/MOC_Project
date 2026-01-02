@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.user.dao.UserReportDAO">
+
+    <!-- UserReportVO와 tb_user_report 테이블 컬럼 매핑을 위한 ResultMap -->
+    <resultMap id="UserReportResultMap" type="com.cucook.moc.user.vo.UserReportVO">
+        <id     property="reportId"         column="user_report_id"/>
+        <result property="reporterUserId"   column="reporter_user_id"/>
+        <result property="reportedUserId"   column="reported_user_id"/>
+        <result property="reportReasonCd"   column="report_reason_cd"/>
+        <result property="reportComment"    column="report_comment"/>
+        <result property="processingStatusCd" column="processing_status_cd"/>
+        <result property="createdId"        column="created_id"/>
+        <result property="createdDate"      column="created_date"/>
+        <result property="processedDate"    column="processed_date"/>
+        <result property="processorId"      column="processor_id"/>
+    </resultMap>
+
+    <!--
+        마이페이지 '내가 신고한 내역' (사용자)을 위한 SELECT 쿼리:
+        특정 사용자가 '신고한' 모든 사용자 신고 목록을 조회합니다.
+        (reporter_user_id가 현재 로그인한 userId와 일치하는 신고)
+        parameterType: long (조회할 사용자의 ID = reporter_user_id)
+        resultMap: UserReportResultMap
+        (향후 tb_user와 조인하여 신고된 사용자 정보(닉네임, 프로필 이미지)를 포함할 수 있음)
+    -->
+    <select id="selectReportedUsersByReporterUserId" parameterType="long" resultMap="UserReportResultMap">
+        SELECT
+            user_report_id,
+            reporter_user_id,
+            reported_user_id,
+            report_reason_cd,
+            report_comment,
+            processing_status_cd,
+            created_id,
+            created_date,
+            processed_date,
+            processor_id
+        FROM
+            tb_user_report
+        WHERE
+            reporter_user_id = #{reporterUserId}
+        ORDER BY
+            created_date DESC -- 최신 신고일 순으로 정렬
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 사용자가 '신고한' 사용자 신고의 총 개수를 조회합니다.
+        (마이페이지 '신고 내역' 카드에 표시용)
+        parameterType: long (조회할 사용자의 ID = reporter_user_id)
+        resultType: int
+    -->
+    <select id="countReportedUsersByReporterUserId" parameterType="long" resultType="int">
+        SELECT
+            COUNT(user_report_id)
+        FROM
+            tb_user_report
+        WHERE
+            reporter_user_id = #{reporterUserId}
+    </select>
+
+    <!--
+        MyBatis INSERT 쿼리: tb_user_report 테이블에 사용자 신고 정보를 저장합니다.
+        (같이 장보기 중 다른 사용자를 신고할 때 사용)
+        parameterType: com.cucook.moc.user.vo.UserReportVO
+    -->
+    <insert id="insertUserReport" parameterType="com.cucook.moc.user.vo.UserReportVO">
+        <selectKey keyProperty="reportId" resultType="long" order="BEFORE">
+            SELECT seq_tb_user_report.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_user_report (
+        user_report_id,
+        reporter_user_id,
+        reported_user_id,
+        report_reason_cd,
+        report_comment,
+        processing_status_cd,
+        created_id
+        -- created_date, updated_date, processed_date는 DDL에 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{reportId},
+        #{reporterUserId},
+        #{reportedUserId},
+        #{reportReasonCd},
+        #{reportComment, jdbcType=VARCHAR},
+        NVL(#{processingStatusCd, jdbcType=VARCHAR}, 'PENDING'), -- NULL일 경우 'PENDING' 기본값
+        #{createdId}
+        )
+    </insert>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 사용자가 특정 대상을 신고한 기록이 이미 존재하는지 확인합니다.
+        (중복 신고 방지용)
+        parameterType: Map
+        resultType: int (0 또는 1)
+    -->
+    <select id="checkIfUserReportExists" parameterType="map" resultType="int">
+        SELECT
+            COUNT(user_report_id)
+        FROM
+            tb_user_report
+        WHERE
+            reporter_user_id = #{reporterUserId}
+          AND reported_user_id = #{reportedUserId}
+    </select>
+
+    <!--
+        MyBatis SELECT 쿼리: 특정 사용자 신고 ID로 단일 신고 정보를 조회합니다.
+        (관리자/개발자용 또는 수정/삭제 전 존재 여부 확인용)
+        parameterType: long
+        resultMap: UserReportResultMap
+    -->
+    <select id="selectUserReportById" parameterType="long" resultMap="UserReportResultMap">
+        SELECT
+            user_report_id,
+            reporter_user_id,
+            reported_user_id,
+            report_reason_cd,
+            report_comment,
+            processing_status_cd,
+            created_id,
+            created_date,
+            processed_date,
+            processor_id
+        FROM
+            tb_user_report
+        WHERE
+            user_report_id = #{reportId}
+    </select>
+
+    <!--
+        MyBatis UPDATE 쿼리: 특정 사용자 신고 정보를 수정합니다.
+        (관리자만 수정 가능하거나, 내용 수정만 가능하도록 비즈니스 로직에서 제어)
+        parameterType: com.cucook.moc.user.vo.UserReportVO
+    -->
+    <update id="updateUserReport" parameterType="com.cucook.moc.user.vo.UserReportVO">
+        UPDATE tb_user_report
+        <set>
+            <if test="reportReasonCd != null and reportReasonCd != ''">
+                report_reason_cd = #{reportReasonCd},
+            </if>
+            <if test="reportComment != null">
+                report_comment = #{reportComment},
+            </if>
+            <if test="processingStatusCd != null and processingStatusCd != ''">
+                processing_status_cd = #{processingStatusCd}, -- 관리자만 변경 가능하도록 서비스에서 제어
+            </if>
+            <if test="processorId != null">
+                processor_id = #{processorId},
+            </if>
+            updated_date = SYSTIMESTAMP -- 이 필드는 DDL에 없으므로, 필요시 DDL 추가 후 사용
+            processed_date = SYSTIMESTAMP -- 처리 시점 업데이트 (statusCd가 변경될 때)
+        </set>
+        WHERE
+        user_report_id = #{reportId}
+        AND reporter_user_id = #{reporterUserId} -- 신고한 사용자 본인만 수정 가능하도록 (정책에 따라)
+    </update>
+
+    <!--
+        MyBatis DELETE 쿼리: 특정 사용자 신고 기록을 삭제합니다.
+        (관리자 또는 신고한 사용자 본인이 삭제할 때 사용)
+        parameterType: Map
+    -->
+    <delete id="deleteUserReport" parameterType="map">
+        DELETE FROM tb_user_report
+        WHERE user_report_id = #{reportId}
+          AND reporter_user_id = #{reporterUserId} -- 신고한 사용자 본인만 삭제 가능하도록 권한 확인
+    </delete>
+
+</mapper>

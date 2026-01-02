@@ -1,0 +1,45 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/assets/fonts/.gitkeep",
+      "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Black.ttf",
+      "sha1": "e85f81607e7ecfe1c21be93e0278cbb754d68deb"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Bold.ttf",
+      "sha1": "5651f33d0ce8918f06c10a48d5a2d599e804c67b"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-ExtraBold.ttf",
+      "sha1": "f350038a5abf0d67f86d8f97dd076b9cd3f2d4a7"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-ExtraLight.ttf",
+      "sha1": "1fa085bc2f3a5dfe039b5a3200efc12d6b758d40"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Light.ttf",
+      "sha1": "fe043bf69c812dcd39a216bc1766936e8d64b254"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Medium.ttf",
+      "sha1": "a434265e4ed09fdb53f76e1f27054b312ae40d80"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Regular.ttf",
+      "sha1": "a2cd60b37bde07851a2e2a94c51ce0373311eb9c"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-SemiBold.ttf",
+      "sha1": "ee36377e4b79f61362c43750498b706bc95c1722"
+    },
+    {
+      "path": "src/assets/fonts/NotoSansKR-Thin.ttf",
+      "sha1": "f5968c78b299845614370e4b3f1d5f011d5a4cf5"
+    }
+  ]
+}

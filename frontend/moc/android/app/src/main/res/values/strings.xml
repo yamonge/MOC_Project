@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">moc</string>
+    
+    <!-- Facebook SDK -->
+    <string name="facebook_app_id">792782273821780</string>
+    <string name="fb_login_protocol_scheme">fb792782273821780</string>
+    <string name="facebook_client_token">f6992e15a9557ef1e82862613b88ca50</string>
+</resources>

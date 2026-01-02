@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.user.dao.MyPageDAO">
+
+    <!-- 재료 관리 -->
+    <select id="countUserIngredients" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_USER_INGREDIENT
+        WHERE USER_ID = #{userId}
+    </select>
+
+    <!-- 저장한 게시글 -->
+    <select id="countSavedRecipes" resultType="int">
+        SELECT
+            (
+                SELECT COUNT(*)
+                FROM TB_RECIPE
+                WHERE OWNER_USER_ID = #{userId}
+                  AND IS_DELETED = 'N'
+            )
+                +
+            (
+                SELECT COUNT(*)
+                FROM TB_RECIPE_LIKE
+                WHERE USER_ID = #{userId}
+            )
+        FROM DUAL
+    </select>
+
+    <!-- 공유한 게시글 -->
+    <select id="countSharedRecipes" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_RECIPE
+        WHERE OWNER_USER_ID = #{userId}
+          AND IS_PUBLIC = 'Y'
+          AND IS_DELETED = 'N'
+    </select>
+
+    <!-- 받은 후기 -->
+    <select id="countReceivedReviews" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_USER_REVIEW
+        WHERE TARGET_USER_ID = #{userId}
+    </select>
+
+    <!-- 내가 한 신고 -->
+    <select id="countMyReports" resultType="int">
+        SELECT COUNT(*) FROM (
+                                 SELECT RECIPE_REPORT_ID
+                                 FROM TB_RECIPE_REPORT
+                                 WHERE REPORTER_USER_ID = #{userId}
+
+                                 UNION ALL
+
+                                 SELECT USER_REPORT_ID
+                                 FROM TB_USER_REPORT
+                                 WHERE REPORTER_USER_ID = #{userId}
+                             )
+    </select>
+
+    <!-- 완료된 모임 수 (status_cd = 'DONE'인 참여 게시물) -->
+    <select id="countCompletedMeetings" resultType="int">
+        SELECT COUNT(DISTINCT sp.shopping_post_id)
+        FROM tb_shopping_participant p
+        JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id
+        JOIN tb_shopping_post sp ON r.shopping_post_id = sp.shopping_post_id
+        WHERE p.user_id = #{userId}
+          AND sp.status_cd = 'DONE'
+          AND p.leave_date IS NULL
+    </select>
+
+    <!-- 전체 참여한 모임 수 (나간 방 제외) -->
+    <select id="countTotalMeetings" resultType="int">
+        SELECT COUNT(DISTINCT sp.shopping_post_id)
+        FROM tb_shopping_participant p
+        JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id
+        JOIN tb_shopping_post sp ON r.shopping_post_id = sp.shopping_post_id
+        WHERE p.user_id = #{userId}
+          AND p.leave_date IS NULL
+    </select>
+
+    <select id="selectMyReportHistory"
+            resultType="com.cucook.moc.user.dto.response.MyPageReportItemDTO">
+
+        /* =========================
+           레시피 신고
+           ========================= */
+        SELECT
+            'RECIPE' AS reportType,
+            RR.RECIPE_REPORT_ID AS reportId,
+
+            R.TITLE AS title,
+            U.USER_NICKNAME AS targetName,
+
+            RR.REPORT_REASON_CD AS reportReasonCd,
+            RR.CONTENT AS reportContent,
+            RR.STATUS_CD AS statusCd,
+            RR.CREATED_DATE AS createdDate
+        FROM TB_RECIPE_REPORT RR
+                 LEFT JOIN TB_RECIPE R
+                           ON R.RECIPE_ID = RR.RECIPE_ID
+                 LEFT JOIN TB_USER U
+                           ON U.USER_ID = R.OWNER_USER_ID
+        WHERE RR.REPORTER_USER_ID = #{userId}
+
+        UNION ALL
+
+        /* =========================
+           사용자 신고
+           ========================= */
+        SELECT
+            'USER' AS reportType,
+            UR.USER_REPORT_ID AS reportId,
+
+            U.USER_NICKNAME AS title,
+            U.USER_NICKNAME AS targetName,
+
+            UR.REPORT_REASON_CD AS reportReasonCd,
+            UR.REPORT_COMMENT AS reportContent,
+            UR.PROCESSING_STATUS_CD AS statusCd,
+            UR.CREATED_DATE AS createdDate
+        FROM TB_USER_REPORT UR
+                 LEFT JOIN TB_USER U
+                           ON U.USER_ID = UR.REPORTED_USER_ID
+        WHERE UR.REPORTER_USER_ID = #{userId}
+
+        ORDER BY createdDate DESC
+    </select>
+
+</mapper>

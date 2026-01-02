@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.chat.dao.ChatMessageDAO">
+
+    <!-- ResultMap -->
+    <resultMap id="ChatMessageResultMap" type="com.cucook.moc.chat.vo.ChatMessageVO">
+        <id     property="chatMessageId" column="chat_message_id"/>
+        <result property="chatRoomId"    column="chat_room_id"/>
+        <result property="senderUserId"  column="sender_user_id"/>
+        <result property="messageTypeCd" column="message_type_cd"/>
+        <result property="messageText"   column="message_text"/>
+        <result property="sentDate"      column="sent_date"/>
+    </resultMap>
+
+    <!-- 메시지 저장 -->
+    <insert id="insertMessage" parameterType="com.cucook.moc.chat.vo.ChatMessageVO">
+        <selectKey keyProperty="chatMessageId" resultType="long" order="BEFORE">
+            SELECT seq_tb_shopping_chat_message.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_shopping_chat_message (
+            chat_message_id,
+            chat_room_id,
+            sender_user_id,
+            message_type_cd,
+            message_text,
+            sent_date,
+            created_date
+        ) VALUES (
+            #{chatMessageId},
+            #{chatRoomId},
+            #{senderUserId},
+            #{messageTypeCd},
+            #{messageText},
+            #{sentDate},
+            SYSTIMESTAMP
+        )
+    </insert>
+
+    <!-- 과거 메시지 조회 (최신순, limit 적용) -->
+    <resultMap id="ChatMessageDTOMap" type="com.cucook.moc.chat.dto.ChatMessageDTO">
+        <result property="messageId"       column="chat_message_id"/>
+        <result property="chatRoomId"      column="chat_room_id"/>
+        <result property="senderUserId"    column="sender_user_id"/>
+        <result property="senderNickname"  column="sender_nickname"/>
+        <result property="messageTypeCd"   column="message_type_cd"/>
+        <result property="messageText"     column="message_text"/>
+        <result property="sentDate"        column="sent_date"/>
+        <result property="createdAt"       column="sent_date"/>
+    </resultMap>
+
+    <select id="selectMessagesByRoom" resultMap="ChatMessageDTOMap">
+        SELECT
+            m.chat_message_id,
+            m.chat_room_id,
+            m.sender_user_id,
+            u.user_nickname AS sender_nickname,
+            m.message_type_cd,
+            m.message_text,
+            m.sent_date
+        FROM tb_shopping_chat_message m
+        LEFT JOIN tb_user u
+          ON m.sender_user_id = u.user_id
+        WHERE m.chat_room_id = #{chatRoomId}
+        ORDER BY m.sent_date DESC
+        FETCH FIRST #{limit} ROWS ONLY
+    </select>
+
+</mapper>

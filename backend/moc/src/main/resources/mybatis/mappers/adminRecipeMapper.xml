@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.admin.dao.AdminRecipeDAO">
+
+    <!-- 관리자 게시글(레시피) 목록 -->
+    <select id="selectAdminRecipeList" resultType="com.cucook.moc.admin.vo.AdminRecipeVO">
+        SELECT
+        r.recipe_id      AS recipeId,
+        r.title          AS title,
+        r.is_public      AS isPublic,
+        r.is_deleted     AS isDeleted,
+        r.report_cnt     AS reportCnt,
+        r.created_date   AS createdDate,
+        u.user_nickname  AS ownerNickname
+        FROM tb_recipe r
+        LEFT JOIN tb_user u ON u.user_id = r.owner_user_id
+        WHERE r.is_deleted = 'N'
+        <if test="status != null and status != ''">
+            <choose>
+                <when test="status == 'public'">
+                    AND r.is_public = 'Y'
+                </when>
+                <when test="status == 'hidden'">
+                    AND r.is_public = 'N'
+                </when>
+            </choose>
+        </if>
+        <if test="search != null and search != ''">
+            AND (
+            LOWER(r.title) LIKE '%' || LOWER(#{search}) || '%'
+            OR LOWER(u.user_nickname) LIKE '%' || LOWER(#{search}) || '%'
+            )
+        </if>
+        ORDER BY r.recipe_id DESC
+    </select>
+
+    <!-- 공개/숨김 변경 -->
+    <update id="updateRecipeVisibility">
+        UPDATE tb_recipe
+        SET is_public = #{isPublic},
+        updated_id = #{adminUserId},
+        updated_date = SYSTIMESTAMP
+        WHERE recipe_id = #{recipeId}
+        AND is_deleted = 'N'
+    </update>
+
+    <!-- 소프트 삭제 -->
+    <update id="softDeleteRecipe">
+        UPDATE tb_recipe
+        SET is_deleted = 'Y',
+        updated_id = #{adminUserId},
+        updated_date = SYSTIMESTAMP
+        WHERE recipe_id = #{recipeId}
+        AND is_deleted = 'N'
+    </update>
+
+</mapper>

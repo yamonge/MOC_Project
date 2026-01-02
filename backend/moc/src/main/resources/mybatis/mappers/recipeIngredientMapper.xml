@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeIngredientDAO">
+
+    <insert id="insertRecipeIngredient" parameterType="com.cucook.moc.recipe.vo.RecipeIngredientVO">
+        <selectKey keyProperty="recipeIngredientId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe_ingredient.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO tb_recipe_ingredient (
+        recipe_ingredient_id,
+        recipe_id,
+        ingredient_name,
+        quantity_desc,
+        is_owned_default,
+        created_id
+        ) VALUES (
+        #{recipeIngredientId},
+        #{recipeId},
+        #{ingredientName},
+        #{quantityDesc},
+        #{isOwnedDefault},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="selectRecipeIngredientsByRecipeId" parameterType="long" resultType="com.cucook.moc.recipe.vo.RecipeIngredientVO">
+        SELECT
+        recipe_ingredient_id AS recipeIngredientId,
+        recipe_id AS recipeId,
+        ingredient_name AS ingredientName,
+        quantity_desc AS quantityDesc,
+        is_owned_default AS isOwnedDefault,
+        created_id AS createdId,
+        created_date AS createdDate,
+        updated_id AS updatedId,
+        updated_date AS updatedDate
+        FROM
+        tb_recipe_ingredient
+        WHERE
+        recipe_id = #{recipeId}
+        ORDER BY
+        recipe_ingredient_id ASC <!-- 재료 순서는 필요에 따라 변경 가능 (예: 주요 재료 먼저) -->
+    </select>
+
+</mapper>

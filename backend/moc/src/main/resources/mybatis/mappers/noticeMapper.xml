@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.notice.dao.NoticeDAO">
+
+    <resultMap id="NoticeResultMap" type="com.cucook.moc.notice.vo.NoticeVO">
+        <id property="noticeId" column="notice_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="isPinned" column="is_pinned"/>
+        <result property="isVisible" column="is_visible"/>
+        <result property="createdId" column="created_id"/>
+        <result property="createdDate" column="created_date"/>
+        <result property="updatedId" column="updated_id"/>
+        <result property="updatedDate" column="updated_date"/>
+    </resultMap>
+
+    <!-- 목록 -->
+    <select id="selectNoticeList" parameterType="com.cucook.moc.notice.dto.request.NoticeSearchRequestDTO"
+            resultMap="NoticeResultMap">
+        SELECT *
+        FROM (
+        SELECT
+        notice_id, title, content, image_url,
+        view_cnt, is_pinned, is_visible,
+        created_id, created_date, updated_id, updated_date
+        FROM tb_notice
+        WHERE is_visible = 'Y'
+        <if test="keyword != null and keyword != ''">
+            AND (
+            LOWER(title) LIKE '%' || LOWER(#{keyword}) || '%'
+            OR LOWER(content) LIKE '%' || LOWER(#{keyword}) || '%'
+            )
+        </if>
+        <if test="lastNoticeId != null">
+            AND notice_id &lt; #{lastNoticeId}
+        </if>
+        ORDER BY
+        CASE WHEN is_pinned = 'Y' THEN 0 ELSE 1 END,
+        notice_id DESC
+        )
+        WHERE ROWNUM &lt;= #{limit}
+    </select>
+
+    <!-- 상세 -->
+    <select id="selectNoticeById" parameterType="long" resultMap="NoticeResultMap">
+        SELECT
+        notice_id, title, content, image_url,
+        view_cnt, is_pinned, is_visible,
+        created_id, created_date, updated_id, updated_date
+        FROM tb_notice
+        WHERE notice_id = #{noticeId}
+    </select>
+
+    <!-- 등록: 시퀀스 이름은 너 DDL에 맞게 바꿔 -->
+    <insert id="insertNotice" parameterType="com.cucook.moc.notice.vo.NoticeVO">
+        <selectKey keyProperty="noticeId" order="BEFORE" resultType="long">
+            SELECT SEQ_TB_NOTICE.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_notice (
+        notice_id, title, content, image_url,
+        view_cnt, is_pinned, is_visible,
+        created_id, created_date, updated_id, updated_date
+        ) VALUES (
+        #{noticeId},
+        #{title},
+        #{content},
+        #{imageUrl, jdbcType=VARCHAR},
+        #{viewCnt},
+        #{isPinned},
+        #{isVisible},
+        #{createdId, jdbcType=NUMERIC},
+        #{createdDate, jdbcType=TIMESTAMP},
+        #{updatedId, jdbcType=NUMERIC},
+        #{updatedDate, jdbcType=TIMESTAMP}
+        )
+    </insert>
+
+    <!-- 수정 -->
+    <update id="updateNotice" parameterType="com.cucook.moc.notice.vo.NoticeVO">
+        UPDATE tb_notice
+        SET
+        title = #{title},
+        content = #{content},
+        image_url = #{imageUrl, jdbcType=VARCHAR},
+        <if test="isPinned != null">
+        is_pinned = #{isPinned, jdbcType=VARCHAR},
+        </if>
+        <if test="isVisible != null">
+        is_visible = #{isVisible, jdbcType=VARCHAR},
+        </if>
+        updated_id = #{updatedId, jdbcType=NUMERIC},
+        updated_date = #{updatedDate, jdbcType=TIMESTAMP}
+        WHERE notice_id = #{noticeId}
+    </update>
+
+    <!-- 핀 변경 -->
+    <update id="updateNoticePin">
+        UPDATE tb_notice
+        SET
+        is_pinned = #{isPinned},
+        updated_date = SYSTIMESTAMP
+        WHERE notice_id = #{noticeId}
+    </update>
+
+    <!-- 소프트 삭제 -->
+    <update id="softDeleteNotice">
+        UPDATE tb_notice
+        SET
+        is_visible = 'N',
+        updated_date = SYSTIMESTAMP
+        WHERE notice_id = #{noticeId}
+    </update>
+
+    <!-- 조회수 증가 -->
+    <update id="increaseViewCount">
+        UPDATE tb_notice
+        SET view_cnt = NVL(view_cnt, 0) + 1
+        WHERE notice_id = #{noticeId}
+    </update>
+
+</mapper>

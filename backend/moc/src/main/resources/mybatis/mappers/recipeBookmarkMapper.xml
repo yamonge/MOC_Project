@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeBookmarkDAO">
+
+    <resultMap id="RecipeBookmarkResultMap" type="com.cucook.moc.recipe.vo.RecipeBookmarkVO">
+        <id     property="bookmarkId"   column="recipe_bookmark_id"/>
+        <result property="userId"       column="user_id"/>
+        <result property="recipeId"     column="recipe_id"/>
+        <result property="createdId"    column="created_id"/>
+        <result property="createdDate"  column="created_date"/>
+    </resultMap>
+
+    <resultMap id="RecipeBookmarkDetailResultMap" type="com.cucook.moc.recipe.dto.response.RecipeBookmarkResponseDTO">
+        <id     property="bookmarkId"   column="bookmark_id_alias"/>
+        <result property="userId"       column="user_id_alias"/>
+        <result property="recipeId"     column="recipe_id_alias"/>
+        <result property="savedDate"    column="created_date_alias"/> <!-- ⭐ DTO에 savedDate가 필요하다면, DB의 created_date를 여기에 매핑 -->
+
+        <association property="recipe" javaType="com.cucook.moc.recipe.dto.response.BookmarkedRecipeDetailDTO">
+            <id     property="recipeId"       column="recipe_pk_id"/>
+            <result property="title"          column="recipe_title"/>
+            <result property="summary"        column="summary"/>
+            <result property="thumbnailUrl"   column="thumbnail_url"/>
+            <result property="difficultyCd"   column="difficulty_cd"/>
+            <result property="cookTimeMin"    column="cook_time_min"/>
+            <result property="cuisineStyleCd" column="cuisine_style_cd"/>
+            <result property="viewCnt"        column="view_cnt"/>
+            <result property="likeCnt"        column="like_cnt"/>
+            <result property="authorNickname" column="author_nickname"/>
+        </association>
+    </resultMap>
+
+    <insert id="insertRecipeBookmark" parameterType="com.cucook.moc.recipe.vo.RecipeBookmarkVO">
+        <selectKey keyProperty="bookmarkId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe_bookmark.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_recipe_bookmark (
+        recipe_bookmark_id,
+        user_id,
+        recipe_id,
+        created_id
+
+        ) VALUES (
+        #{bookmarkId},
+        #{userId},
+        #{recipeId},
+        #{createdId}
+        )
+    </insert>
+
+    <delete id="deleteRecipeBookmark" parameterType="map">
+        DELETE FROM tb_recipe_bookmark
+        WHERE user_id = #{userId} AND recipe_id = #{recipeId}
+    </delete>
+
+    <select id="selectRecipeBookmarksWithDetailByUserId"
+            parameterType="long"
+            resultMap="RecipeBookmarkDetailResultMap">
+
+        <!-- ① 북마크 기반 -->
+        SELECT
+        rb.recipe_bookmark_id  AS bookmark_id_alias,
+        rb.user_id             AS user_id_alias,
+        rb.recipe_id           AS recipe_id_alias,
+        rb.created_date        AS created_date_alias,
+
+        r.recipe_id            AS recipe_pk_id,
+        r.title                AS recipe_title,
+        r.summary,
+        r.thumbnail_url,
+        r.difficulty_cd,
+        r.cook_time_min,
+        r.cuisine_style_cd,
+        r.view_cnt,
+        r.like_cnt,
+
+        u.user_nickname        AS author_nickname
+        FROM tb_recipe_bookmark rb
+        JOIN tb_recipe r
+        ON rb.recipe_id = r.recipe_id
+        LEFT JOIN tb_user u
+        ON r.owner_user_id = u.user_id
+        WHERE rb.user_id = #{userId}
+        AND u.user_status = 'ACTIVE'
+
+        UNION ALL
+
+        <!-- ② AI 추천 → 저장된 레시피 (북마크 제외) -->
+        SELECT
+        NULL                   AS bookmark_id_alias,
+        r.owner_user_id        AS user_id_alias,
+        r.recipe_id            AS recipe_id_alias,
+        r.created_date         AS created_date_alias,
+
+        r.recipe_id            AS recipe_pk_id,
+        r.title                AS recipe_title,
+        r.summary,
+        r.thumbnail_url,
+        r.difficulty_cd,
+        r.cook_time_min,
+        r.cuisine_style_cd,
+        r.view_cnt,
+        r.like_cnt,
+
+        u.user_nickname        AS author_nickname
+        FROM tb_recipe r
+        LEFT JOIN tb_user u
+        ON r.owner_user_id = u.user_id
+        WHERE r.owner_user_id = #{userId}
+        AND r.is_deleted = 'N'
+        AND u.user_status = 'ACTIVE'
+        AND NOT EXISTS (
+        SELECT 1
+        FROM tb_recipe_bookmark rb
+        WHERE rb.recipe_id = r.recipe_id
+        AND rb.user_id = #{userId}
+        )
+
+        ORDER BY created_date_alias DESC
+    </select>
+
+    <select id="countRecipeBookmarksByUserId" parameterType="long" resultType="int">
+        SELECT
+            COUNT(recipe_bookmark_id)
+        FROM
+            tb_recipe_bookmark
+        WHERE
+            user_id = #{userId}
+    </select>
+
+    <select id="checkIfRecipeIsBookmarked" parameterType="map" resultType="int">
+        SELECT
+            COUNT(recipe_bookmark_id)
+        FROM
+            tb_recipe_bookmark
+        WHERE
+            user_id = #{userId} AND recipe_id = #{recipeId}
+    </select>
+
+</mapper>

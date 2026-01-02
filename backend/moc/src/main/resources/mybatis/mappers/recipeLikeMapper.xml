@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeLikeDAO"> <!-- DAO 인터페이스 패키지/이름 가정 -->
+
+    <resultMap id="RecipeLikeResultMap" type="com.cucook.moc.recipe.vo.RecipeLikeVO">
+        <id     property="likeId"       column="recipe_like_id"/>
+        <result property="recipeId"     column="recipe_id"/>
+        <result property="userId"       column="user_id"/>
+        <result property="createdId"    column="created_id"/>
+        <result property="createdDate"  column="created_date"/>
+    </resultMap>
+
+    <resultMap id="RecipeLikeDetailResultMap" type="com.cucook.moc.recipe.dto.response.RecipeLikeResponseDTO">
+        <id     property="likeId"       column="like_id_alias"/>
+        <result property="recipeId"     column="recipe_id_alias"/>
+        <result property="userId"       column="user_id_alias"/>
+        <result property="createdDate"  column="created_date_alias"/>
+
+        <association property="recipe" javaType="com.cucook.moc.recipe.dto.response.LikedRecipeDetailDTO">
+            <id     property="recipeId"       column="recipe_pk_id"/>
+            <result property="title"          column="recipe_title"/>
+            <result property="summary"        column="summary"/>
+            <result property="thumbnailUrl"   column="thumbnail_url"/>
+            <result property="difficultyCd"   column="difficulty_cd"/>
+            <result property="cookTimeMin"    column="cook_time_min"/>
+            <result property="cuisineStyleCd" column="cuisine_style_cd"/>
+            <result property="viewCnt"        column="view_cnt"/>
+            <result property="likeCnt"        column="like_cnt"/>
+            <result property="authorNickname" column="author_nickname"/>
+        </association>
+    </resultMap>
+
+    <insert id="insertRecipeLike" parameterType="com.cucook.moc.recipe.vo.RecipeLikeVO">
+        <selectKey keyProperty="likeId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe_like.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_recipe_like (
+        recipe_like_id,
+        recipe_id,
+        user_id,
+        created_id
+        ) VALUES (
+        #{likeId},
+        #{recipeId},
+        #{userId},
+        #{createdId}
+        )
+    </insert>
+
+    <delete id="deleteRecipeLike" parameterType="map">
+        DELETE FROM tb_recipe_like
+        WHERE user_id = #{userId} AND recipe_id = #{recipeId}
+    </delete>
+
+    <select id="selectRecipeLikesWithDetailByUserId"
+            parameterType="long"
+            resultMap="RecipeLikeDetailResultMap">
+
+        SELECT
+            rl.recipe_like_id      AS like_id_alias,
+            rl.recipe_id           AS recipe_id_alias,
+            rl.user_id             AS user_id_alias,
+            rl.created_date        AS created_date_alias,
+
+            r.recipe_id            AS recipe_pk_id,
+            r.title                AS recipe_title,
+            r.summary,
+            r.thumbnail_url,
+            r.difficulty_cd,
+            r.cook_time_min,
+            r.cuisine_style_cd,
+            r.view_cnt,
+            r.like_cnt,
+
+            u.user_nickname        AS author_nickname   -- 🔥 핵심
+
+        FROM tb_recipe_like rl
+                 JOIN tb_recipe r
+                      ON rl.recipe_id = r.recipe_id
+                 JOIN tb_user u
+                      ON r.owner_user_id = u.user_id              -- 🔥 작성자 JOIN
+
+        WHERE rl.user_id = #{userId}
+        ORDER BY rl.created_date DESC
+    </select>
+
+    <select id="countRecipeLikesByUserId" parameterType="long" resultType="int">
+        SELECT
+            COUNT(recipe_like_id)
+        FROM
+            tb_recipe_like
+        WHERE
+            user_id = #{userId}
+    </select>
+
+    <select id="checkIfRecipeIsLiked" parameterType="map" resultType="int">
+        SELECT
+            COUNT(recipe_like_id)
+        FROM
+            tb_recipe_like
+        WHERE
+            user_id = #{userId} AND recipe_id = #{recipeId}
+    </select>
+
+    <update id="incrementRecipeLikeCount" parameterType="long">
+        UPDATE tb_recipe
+        SET like_cnt = like_cnt + 1
+        WHERE recipe_id = #{recipeId}
+    </update>
+
+    <update id="decrementRecipeLikeCount" parameterType="long">
+        UPDATE tb_recipe
+        SET like_cnt = GREATEST(0, like_cnt - 1) -- like_cnt가 음수가 되지 않도록 방지
+        WHERE recipe_id = #{recipeId}
+    </update>
+
+</mapper>

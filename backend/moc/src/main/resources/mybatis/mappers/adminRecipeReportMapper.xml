@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.admin.dao.AdminRecipeReportDAO">
+
+    <!-- 레시피 신고 목록 조회 -->
+    <select id="selectRecipeReportList"
+            parameterType="com.cucook.moc.admin.dto.request.AdminRecipeReportSearchRequestDTO"
+            resultType="com.cucook.moc.admin.vo.AdminRecipeReportVO">
+
+        SELECT
+        r.recipe_report_id        AS recipeReportId,
+        r.recipe_id               AS recipeId,
+        r.reporter_user_id        AS reporterUserId,
+        u1.user_nickname          AS reporterNickname,
+        r.report_reason_cd        AS reportReasonCd,
+        r.content                 AS content,
+        r.status_cd               AS statusCd,
+        r.created_date            AS createdDate,
+        r.updated_date            AS updatedDate,
+        rec.title                 AS recipeTitle,
+        rec.owner_user_id         AS recipeOwnerUserId,
+        u2.user_nickname          AS recipeOwnerNickname
+        FROM tb_recipe_report r
+        JOIN tb_user u1 ON u1.user_id = r.reporter_user_id
+        LEFT JOIN tb_recipe rec ON rec.recipe_id = r.recipe_id
+        LEFT JOIN tb_user u2 ON u2.user_id = rec.owner_user_id
+        WHERE 1=1
+        AND (rec.is_deleted IS NULL OR rec.is_deleted = 'N')
+
+        <if test="reasonCd != null and reasonCd != ''">
+            AND r.report_reason_cd = #{reasonCd}
+        </if>
+
+        <if test="statusCd != null and statusCd != '' and statusCd != 'ALL'">
+            <choose>
+                <when test="statusCd == 'PROCESSED'">
+                    AND r.status_cd IN ('APPROVED', 'REJECTED')
+                </when>
+                <otherwise>
+                    AND r.status_cd = #{statusCd}
+                </otherwise>
+            </choose>
+        </if>
+
+        <if test="keyword != null and keyword != ''">
+            AND (
+            u1.user_nickname LIKE '%' || #{keyword} || '%'
+            OR rec.title LIKE '%' || #{keyword} || '%'
+            OR u2.user_nickname LIKE '%' || #{keyword} || '%'
+            )
+        </if>
+
+        <if test="lastRecipeReportId != null">
+            AND r.recipe_report_id &lt; #{lastRecipeReportId}
+        </if>
+
+        ORDER BY r.recipe_report_id DESC
+        FETCH FIRST #{limit} ROWS ONLY
+    </select>
+
+</mapper>
+

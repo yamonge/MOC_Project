@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.IngredientUseHistDAO">
+
+    <resultMap id="IngredientUseHistResultMap" type="com.cucook.moc.recipe.vo.IngredientUseHistVO">
+        <id     property="ingredientUseHistId" column="ingredient_use_hist_id"/>
+        <result property="userId"              column="user_id"/>
+        <result property="userIngredientId"    column="user_ingredient_id"/>
+        <result property="recipeId"            column="recipe_id"/>
+        <result property="useTypeCd"           column="use_type_cd"/>
+        <result property="useAmountDesc"       column="use_amount_desc"/>
+        <result property="usedDate"            column="used_date"/>
+        <result property="createdId"           column="created_id"/>
+        <result property="createdDate"         column="created_date"/>
+    </resultMap>
+
+    <select id="selectIngredientUseHistsByUserId" parameterType="long" resultMap="IngredientUseHistResultMap">
+        SELECT
+            ingredient_use_hist_id,
+            user_id,
+            user_ingredient_id,
+            recipe_id,
+            use_type_cd,
+            use_amount_desc,
+            used_date,
+            created_id,
+            created_date
+        FROM
+            tb_ingredient_use_hist
+        WHERE
+            user_id = #{userId}
+        ORDER BY
+            used_date DESC, ingredient_use_hist_id DESC -- 최신 사용일 순
+    </select>
+
+    <select id="selectIngredientUseHistsByUserIngredientId" parameterType="long" resultMap="IngredientUseHistResultMap">
+        SELECT
+            ingredient_use_hist_id,
+            user_id,
+            user_ingredient_id,
+            recipe_id,
+            use_type_cd,
+            use_amount_desc,
+            used_date,
+            created_id,
+            created_date
+        FROM
+            tb_ingredient_use_hist
+        WHERE
+            user_ingredient_id = #{userIngredientId}
+        ORDER BY
+            used_date DESC, ingredient_use_hist_id DESC
+    </select>
+
+    <insert id="insertIngredientUseHist" parameterType="com.cucook.moc.recipe.vo.IngredientUseHistVO">
+        <!-- Oracle 시퀀스에서 다음 값을 가져와 VO 객체의 ingredientUseHistId 필드에 설정 (INSERT 전에 실행) -->
+        <selectKey keyProperty="ingredientUseHistId" resultType="long" order="BEFORE">
+            SELECT seq_tb_ingredient_use_hist.NEXTVAL FROM DUAL
+        </selectKey>
+
+        INSERT INTO tb_ingredient_use_hist (
+        ingredient_use_hist_id,
+        user_id,
+        user_ingredient_id,
+        recipe_id,
+        use_type_cd,
+        use_amount_desc,
+        -- used_date는 테이블 정의에 따라 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        created_id
+        -- created_date는 테이블 정의에 따라 DEFAULT SYSTIMESTAMP로 자동 입력됩니다.
+        ) VALUES (
+        #{ingredientUseHistId},
+        #{userId},
+        #{userIngredientId},
+        #{recipeId},
+        #{useTypeCd},
+        #{useAmountDesc},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="selectIngredientUseHistById" parameterType="long" resultMap="IngredientUseHistResultMap">
+        SELECT
+            ingredient_use_hist_id,
+            user_id,
+            user_ingredient_id,
+            recipe_id,
+            use_type_cd,
+            use_amount_desc,
+            used_date,
+            created_id,
+            created_date
+        FROM
+            tb_ingredient_use_hist
+        WHERE
+            ingredient_use_hist_id = #{ingredientUseHistId}
+    </select>
+
+    <select id="selectIngredientUseHistsByRecipeAndUser" parameterType="map" resultMap="IngredientUseHistResultMap">
+        SELECT
+            ingredient_use_hist_id,
+            user_id,
+            user_ingredient_id,
+            recipe_id,
+            use_type_cd,
+            use_amount_desc,
+            used_date,
+            created_id,
+            created_date
+        FROM
+            tb_ingredient_use_hist
+        WHERE
+            user_id = #{userId} AND recipe_id = #{recipeId}
+        ORDER BY
+            used_date DESC
+    </select>
+
+    <select id="countIngredientUseHistsByUserId" parameterType="long" resultType="int">
+        SELECT
+            COUNT(ingredient_use_hist_id)
+        FROM
+            tb_ingredient_use_hist
+        WHERE
+            user_id = #{userId}
+    </select>
+
+    <delete id="deleteIngredientUseHist" parameterType="long">
+        DELETE FROM tb_ingredient_use_hist
+        WHERE ingredient_use_hist_id = #{ingredientUseHistId}
+    </delete>
+
+    <delete id="deleteIngredientUseHistsByRecipeAndUser" parameterType="map">
+        DELETE FROM tb_ingredient_use_hist
+        WHERE user_id = #{userId} AND recipe_id = #{recipeId}
+    </delete>
+
+</mapper>

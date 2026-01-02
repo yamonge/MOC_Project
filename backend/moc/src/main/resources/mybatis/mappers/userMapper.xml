@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.user.dao.UserDAO">
+    <!-- tb_user ↔ UserVO 매핑 -->
+    <resultMap id="UserResultMap" type="com.cucook.moc.user.vo.UserVO">
+        <id     property="userId"                column="user_id"/>
+        <result property="userEmail"             column="user_email"/>
+        <result property="userName"              column="user_name"/>
+        <result property="userNickname"          column="user_nickname"/>
+        <result property="userPassword"          column="user_password"/>
+        <result property="userBirthDate"         column="user_birth_date"/>
+        <result property="userProfileImageUrl"   column="user_profile_image_url"/>
+        <result property="userType"              column="user_type"/>
+        <result property="userStatus"            column="user_status"/>
+        <result property="suspendedReason"       column="suspended_reason"/>
+        <result property="suspendedUntil"        column="suspended_until"/>
+        <result property="reportedCnt"           column="reported_cnt"/>
+        <result property="shoppingCompletedCnt"  column="shopping_completed_cnt"/>
+        <result property="shoppingParticipatedCnt" column="shopping_participated_cnt"/>
+        <result property="ratingScore"           column="rating_score"/>
+        <result property="trustScore"            column="trust_score"/>
+        <result property="lastLoginDate"         column="last_login_date"/>
+        <result property="deviceOs"              column="device_os"/>
+        <result property="deviceVersion"         column="device_version"/>
+        <result property="fcmToken"              column="fcm_token"/>
+        <result property="createdId"             column="created_id"/>
+        <result property="createdDate"           column="created_date"/>
+        <result property="updatedId"             column="updated_id"/>
+        <result property="updatedDate"           column="updated_date"/>
+    </resultMap>
+
+    <!-- 1) 이메일로 유저 조회 -->
+    <select id="findByUserEmail"
+            parameterType="string"
+            resultMap="UserResultMap">
+        SELECT *
+        FROM tb_user
+        WHERE user_email = #{userEmail}
+    </select>
+
+    <!-- 2) 이메일 중복 체크 -->
+    <select id="countByUserEmail"
+            parameterType="string"
+            resultType="int">
+        SELECT COUNT(1)
+        FROM tb_user
+        WHERE user_email = #{userEmail}
+    </select>
+    
+    <!-- 2) 닉네임 중복 체크 -->
+    <select id="countByNickname" resultType="int">
+        SELECT COUNT(1)
+        FROM tb_user
+        WHERE user_nickname = #{userNickname}
+    </select>
+
+    <!-- 3) 회원가입 -->
+    <insert id="insertUser"
+            parameterType="com.cucook.moc.user.vo.UserVO">
+        <selectKey keyProperty="userId"
+                   resultType="long"
+                   order="BEFORE">
+            SELECT seq_tb_user.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_user (
+            user_id,
+            user_email,
+            user_name,
+            user_nickname,
+            user_password,
+            user_birth_date,
+            fcm_token,
+            device_os,
+            device_version,
+            user_type,
+            user_status,
+            reported_cnt,
+            shopping_completed_cnt,
+            rating_score,
+            trust_score,
+            created_date
+        ) VALUES (
+            #{userId},
+            #{userEmail},
+            #{userName},
+            #{userNickname},
+            #{userPassword, jdbcType=VARCHAR},
+            #{userBirthDate, jdbcType=DATE},
+            #{fcmToken, jdbcType=VARCHAR},
+            #{deviceOs, jdbcType=VARCHAR},
+            #{deviceVersion, jdbcType=VARCHAR},
+            #{userType},
+            #{userStatus},
+            #{reportedCnt},
+            #{shoppingCompletedCnt},
+            #{ratingScore},
+            #{trustScore},
+            #{createdDate, jdbcType=TIMESTAMP}
+        )
+    </insert>
+
+    <!-- 4) 이름 + 생년월일로 아이디 찾기 -->
+    <select id="findByNameAndBirthDate"
+            parameterType="map"
+            resultMap="UserResultMap">
+        SELECT *
+        FROM tb_user
+        WHERE user_name = #{userName}
+            AND TRUNC(user_birth_date) = TRUNC(#{userBirthDate})
+    </select>
+
+    <!-- 5) 비밀번호 찾기용 사용자 조회 (이메일 + 이름 + 생년월일) -->
+    <select id="findForPasswordReset"
+            parameterType="map"
+            resultMap="UserResultMap">
+        SELECT *
+        FROM tb_user
+        WHERE user_email      = #{userEmail}
+            AND user_name       = #{userName}
+            AND TRUNC(user_birth_date) = TRUNC(#{userBirthDate})
+    </select>
+
+    <!-- 6) 비밀번호 변경 -->
+    <update id="updatePassword"
+            parameterType="map">
+        UPDATE tb_user
+        SET user_password = #{userPassword},
+        updated_date  = SYSTIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 7) 마지막 로그인 시간 갱신 -->
+    <update id="updateLastLoginDate"
+            parameterType="long">
+        UPDATE tb_user
+        SET last_login_date = SYSTIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 8) FCM 토큰 / 디바이스 정보 업데이트 -->
+    <update id="updateFcmToken"
+            parameterType="map">
+        UPDATE tb_user
+        SET fcm_token      = #{fcmToken, jdbcType=VARCHAR},
+        device_os      = #{deviceOs, jdbcType=VARCHAR},
+        device_version = #{deviceVersion, jdbcType=VARCHAR},
+        updated_date   = SYSTIMESTAMP,
+        updated_id     = #{userId}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- userId로 조회 (마이프로필/채팅 senderNickname용) -->
+    <!--
+      user_id 로 유저 조회
+      - 공지 작성 시 adminUserId 로 넘어온 사용자가 실제 관리자(user_type='Y')인지도 확인하는 용도
+    -->
+    <select id="selectById"
+            parameterType="long"
+            resultMap="UserResultMap">
+        SELECT *
+        FROM tb_user
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 여러 사용자의 FCM Token 조회 (알림 전송용) -->
+    <select id="selectFcmTokensByUserIds"
+            parameterType="map"
+            resultType="string">
+        SELECT fcm_token
+        FROM tb_user
+        WHERE user_id IN
+        <foreach item="id" collection="userIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND fcm_token IS NOT NULL
+    </select>
+
+    <!-- 같이 장보기 유저 평점 평균 -->
+    <update id="updateRatingScoreByAvg">
+        UPDATE tb_user u
+        SET rating_score = (
+            SELECT NVL(AVG(r.rating), 0)
+            FROM tb_user_review r
+            WHERE r.target_user_id = #{targetUserId}
+        )
+        WHERE u.user_id = #{targetUserId}
+    </update>
+
+    <!-- 설정화면 - 프로필 수정 -->
+    <update id="updateUserProfile">
+        UPDATE tb_user
+        SET user_name = #{userName},
+        user_nickname = #{userNickname},
+        user_profile_image_url =
+            CASE
+                WHEN #{userProfileImageUrl, jdbcType=VARCHAR} IS NULL THEN user_profile_image_url
+                ELSE #{userProfileImageUrl, jdbcType=VARCHAR}
+            END,
+        updated_id = #{updatedId},
+        updated_date = #{updatedDate}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 설정화면 - 회원 상태 변경 -->
+    <update id="updateUserStatus">
+        UPDATE tb_user
+        SET user_status = #{userStatus},
+        updated_id = #{updatedId},
+        updated_date = #{updatedDate}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 이용 기간 정지 유저 기간정지 만료 후 자동 복구 -->
+    <update id="restoreExpiredSuspensionToActive" parameterType="long">
+        UPDATE tb_user
+        SET
+        user_status = 'ACTIVE',
+        suspended_until = NULL,
+        suspended_reason = NULL
+        WHERE user_id = #{userId}
+        AND user_status = 'SUSPENDED'
+        AND suspended_until IS NOT NULL
+        AND suspended_until &lt;= SYSTIMESTAMP
+    </update>
+
+    <!-- 완료한 모임 수 실시간 조회 (status_cd = 'DONE'인 참여 게시물) -->
+    <select id="countCompletedMeetings" resultType="int">
+        SELECT COUNT(DISTINCT sp.shopping_post_id)
+        FROM tb_shopping_participant p
+        JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id
+        JOIN tb_shopping_post sp ON r.shopping_post_id = sp.shopping_post_id
+        WHERE p.user_id = #{userId}
+          AND sp.status_cd = 'DONE'
+          AND p.leave_date IS NULL
+    </select>
+
+    <!-- 전체 참여한 모임 수 실시간 조회 (나간 방 제외) -->
+    <select id="countTotalMeetings" resultType="int">
+        SELECT COUNT(DISTINCT sp.shopping_post_id)
+        FROM tb_shopping_participant p
+        JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id
+        JOIN tb_shopping_post sp ON r.shopping_post_id = sp.shopping_post_id
+        WHERE p.user_id = #{userId}
+          AND p.leave_date IS NULL
+    </select>
+
+    <select id="selectReviewedUserDetail"
+            parameterType="long"
+            resultType="com.cucook.moc.user.dto.ReviewedUserDetailDTO">
+        SELECT
+            user_id               AS userId,
+            user_nickname         AS nickname,
+            user_profile_image_url AS profileImageUrl
+        FROM tb_user
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cucook.moc.recipe.dao.RecipeDAO">
+
+    <resultMap id="RecipeDetailResultMap"
+               type="com.cucook.moc.recipe.vo.RecipeVO">
+        <id property="recipeId" column="recipe_id"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="difficultyCd" column="difficulty_cd"/>
+        <result property="cookTimeMin" column="cook_time_min"/>
+        <result property="cuisineStyleCd" column="cuisine_style_cd"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="likeCnt" column="like_cnt"/>
+        <result property="authorNickname" column="author_nickname"/>
+        <result property="createdDate" column="created_date"/>
+    </resultMap>
+
+    <insert id="insertRecipe" parameterType="com.cucook.moc.recipe.vo.RecipeVO">
+        <selectKey keyProperty="recipeId" resultType="long" order="BEFORE">
+            SELECT seq_tb_recipe.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_recipe (
+        recipe_id,
+        owner_user_id,
+        source_type,
+        title,
+        summary,
+        thumbnail_url,
+        difficulty_cd,
+        cook_time_min,
+        cuisine_style_cd,
+        category,
+        is_public,
+        is_deleted,
+        view_cnt,
+        like_cnt,
+        report_cnt,
+        created_id
+        ) VALUES (
+        #{recipeId},
+        #{ownerUserId},
+        #{sourceType},
+        #{title},
+        #{summary, jdbcType=VARCHAR},
+        #{thumbnailUrl, jdbcType=VARCHAR},
+        #{difficultyCd},
+        #{cookTimeMin},
+        #{cuisineStyleCd},
+        #{category},
+        #{isPublic},
+        #{isDeleted},
+        #{viewCnt},
+        #{likeCnt},
+        #{reportCnt},
+        #{createdId}
+        )
+    </insert>
+
+    <select id="selectRecipeById" parameterType="long" resultType="com.cucook.moc.recipe.vo.RecipeVO">
+        SELECT
+        recipe_id as recipeId,
+        owner_user_id as ownerUserId,
+        source_type as sourceType,
+        title,
+        summary,
+        thumbnail_url as thumbnailUrl,
+        difficulty_cd as difficultyCd,
+        cook_time_min as cookTimeMin,
+        cuisine_style_cd as cuisineStyleCd,
+        is_public as isPublic,
+        is_deleted as isDeleted,
+        view_cnt as viewCnt,
+        like_cnt as likeCnt,
+        report_cnt as reportCnt,
+        created_id as createdId,
+        created_date as createdDate,
+        updated_id as updatedId,
+        updated_date as updatedDate
+        FROM
+        tb_recipe
+        WHERE
+        recipe_id = #{recipeId}
+        AND is_deleted = 'N' <!-- 삭제되지 않은 레시피만 조회 -->
+    </select>
+
+    <select id="selectRecipesByCriteria" parameterType="com.cucook.moc.recipe.vo.RecipeVO" resultType="com.cucook.moc.recipe.vo.RecipeVO">
+        SELECT
+        recipe_id as recipeId,
+        owner_user_id as ownerUserId,
+        source_type as sourceType,
+        external_ref_id as externalRefId,
+        title,
+        summary,
+        thumbnail_url as thumbnailUrl,
+        difficulty_cd as difficultyCd,
+        cook_time_min as cookTimeMin,
+        cuisine_style_cd as cuisineStyleCd,
+        is_public as isPublic,
+        is_deleted as isDeleted,
+        view_cnt as viewCnt,
+        like_cnt as likeCnt,
+        report_cnt as reportCnt,
+        created_id as createdId,
+        created_date as createdDate,
+        updated_id as updatedId,
+        updated_date as updatedDate
+        FROM
+        tb_recipe
+        <where>
+            is_deleted = 'N' <!-- 삭제되지 않은 레시피만 조회 -->
+            <if test="recipeId != null">
+                AND recipe_id = #{recipeId}
+            </if>
+            <if test="ownerUserId != null and ownerUserId != ''">
+                AND owner_user_id = #{ownerUserId}
+            </if>
+            <if test="sourceType != null and sourceType != ''">
+                AND source_type = #{sourceType}
+            </if>
+            <if test="title != null and title != ''">
+                AND title LIKE '%' || #{title} || '%'
+            </if>
+            <if test="difficultyCd != null and difficultyCd != ''">
+                AND difficulty_cd = #{difficultyCd}
+            </if>
+            <if test="cookTimeMin != null">
+                AND cook_time_min <![CDATA[ <= ]]> #{cookTimeMin} <!-- 요청된 최대 조리 시간 이하 -->
+            </if>
+            <if test="cuisineStyleCd != null and cuisineStyleCd != ''">
+                AND cuisine_style_cd = #{cuisineStyleCd}
+            </if>
+            <if test="isPublic != null">
+                AND is_public = #{isPublic}
+            </if>
+        </where>
+        ORDER BY
+        created_date DESC, view_cnt DESC
+    </select>
+
+    <select id="selectRecipeExists" parameterType="long" resultType="int">
+        SELECT COUNT(1)
+        FROM tb_recipe
+        WHERE recipe_id = #{recipeId}
+          AND is_deleted = 'N'
+    </select>
+    <!--내가 공개한 레피시 목록 (마이페이지)-->
+    <select id="selectMyPublicRecipes"
+            parameterType="long"
+            resultMap="RecipeDetailResultMap">
+        SELECT
+            r.recipe_id,
+            r.title,
+            r.summary,
+            r.thumbnail_url,
+            r.difficulty_cd,
+            r.cook_time_min,
+            r.cuisine_style_cd,
+            r.view_cnt,
+            r.like_cnt,
+            r.created_date,
+            u.user_nickname AS author_nickname
+        FROM tb_recipe r
+                 JOIN tb_user u
+                      ON r.owner_user_id = u.user_id
+        WHERE r.owner_user_id = #{userId}
+          AND r.is_public = 'Y'
+          AND r.is_deleted = 'N'
+        ORDER BY r.created_date DESC
+    </select>
+
+    <!-- 레시피 좋아요 수 증가 -->
+    <update id="incrementRecipeLikeCount" parameterType="long">
+        UPDATE tb_recipe
+        SET like_cnt = like_cnt + 1
+        WHERE recipe_id = #{recipeId}
+    </update>
+
+    <!-- 레시피 좋아요 수 감소 -->
+    <update id="decrementRecipeLikeCount" parameterType="long">
+        UPDATE tb_recipe
+        SET like_cnt = CASE
+                           WHEN like_cnt > 0 THEN like_cnt - 1
+                           ELSE 0
+            END
+        WHERE recipe_id = #{recipeId}
+    </update>
+
+</mapper>

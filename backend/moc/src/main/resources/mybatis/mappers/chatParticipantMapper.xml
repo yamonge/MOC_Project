@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cucook.moc.chat.dao.ChatParticipantDAO">
+
+    <!-- 참여자 insert -->
+    <insert id="insertParticipant">
+        <selectKey keyProperty="shoppingParticipantId"
+                   resultType="long"
+                   order="BEFORE">
+            SELECT seq_tb_shopping_participant.NEXTVAL FROM dual
+        </selectKey>
+
+        INSERT INTO tb_shopping_participant (
+            shopping_participant_id,
+            chat_room_id,
+            user_id,
+            join_date,
+            created_id,
+            created_date
+        ) VALUES (
+            #{shoppingParticipantId},
+            #{chatRoomId},
+            #{userId},
+            SYSTIMESTAMP,
+            #{userId},
+            SYSTIMESTAMP
+        )
+    </insert>
+
+    <!-- 해당 방에 유저가 이미 있는지 -->
+    <select id="existsByRoomAndUser"
+            resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+        FROM tb_shopping_participant
+        WHERE chat_room_id = #{chatRoomId}
+          AND user_id      = #{userId}
+          AND leave_date IS NULL
+    </select>
+
+    <!-- 참가자 목록 + 닉네임/평점 (프로필용) -->
+    <resultMap id="ChatParticipantInfoMap" type="com.cucook.moc.chat.dto.ChatParticipantDTO">
+        <result property="userId"       column="user_id"/>
+        <result property="nickname"     column="user_nickname"/>
+        <result property="ratingScore"  column="rating_score"/>
+        <result property="isOwner"      column="is_owner"/>
+        <result property="profileImageUrl" column="user_profile_image_url"/>
+    </resultMap>
+
+    <select id="selectParticipantInfos"
+            parameterType="long"
+            resultMap="ChatParticipantInfoMap">
+        SELECT
+            p.user_id,
+            u.user_nickname,
+            u.rating_score,
+            u.user_profile_image_url,
+            CASE WHEN sp.writer_user_id = p.user_id THEN 1 ELSE 0 END as is_owner
+        FROM tb_shopping_participant p
+        JOIN tb_user u
+          ON p.user_id = u.user_id
+        JOIN tb_shopping_chat_room r
+          ON p.chat_room_id = r.chat_room_id
+        JOIN tb_shopping_post sp
+          ON r.shopping_post_id = sp.shopping_post_id
+        WHERE p.chat_room_id = #{chatRoomId}
+          AND p.leave_date IS NULL
+    </select>
+
+    <!-- 특정 장보기에 해당 유저가 참여했는지 -->
+    <select id="existsByPostAndUser"
+            resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+        FROM tb_shopping_participant p
+        JOIN tb_shopping_chat_room r
+        ON p.chat_room_id = r.chat_room_id
+        WHERE r.shopping_post_id = #{shoppingPostId}
+        AND p.user_id          = #{userId}
+        AND p.leave_date IS NULL
+    </select>
+
+    <!-- 채팅방 참여자 UserId 목록 조회 (알림 전송용) -->
+    <select id="selectUserIdsByRoom"
+            parameterType="long"
+            resultType="long">
+        SELECT user_id
+        FROM tb_shopping_participant
+        WHERE chat_room_id = #{chatRoomId}
+          AND leave_date IS NULL
+    </select>
+
+    <!-- 참여자 나가기 (퇴장 시간 업데이트) -->
+    <update id="updateLeaveDate">
+        UPDATE tb_shopping_participant
+        SET leave_date = SYSTIMESTAMP
+        WHERE chat_room_id = #{chatRoomId}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- 전체 참여자 강퇴 (방 삭제 시) -->
+    <update id="bulkUpdateLeaveDate">
+        UPDATE tb_shopping_participant
+        SET leave_date = SYSTIMESTAMP
+        WHERE chat_room_id = #{chatRoomId}
+          AND leave_date IS NULL
+    </update>
+
+</mapper>
