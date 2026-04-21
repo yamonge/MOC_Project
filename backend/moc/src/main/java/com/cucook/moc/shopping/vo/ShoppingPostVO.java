@@ -1,6 +1,9 @@
 package com.cucook.moc.shopping.vo;
 
+import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 
@@ -9,34 +12,39 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
+@Entity
+@Table(name = "tb_shopping_post")
 public class ShoppingPostVO {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long shoppingPostId;
 
-    // 작성자
     private Long writerUserId;
 
-    // 모임 시간
     private Timestamp meetDatetime;
 
-    // 인원 정보
     private Integer minPersonCnt;
     private Integer maxPersonCnt;
     private Integer currentPersonCnt;
 
-    // 게시글 내용 / 상태
     private String description;
-    private String statusCd;   // OPEN, CLOSED, CANCELED
 
-    // 장소 정보 직접 저장
+    @Column(length = 20)
+    private String statusCd;
+
     private String placeName;
     private String placeAddress;
     private Double latitude;
     private Double longitude;
 
-    // 공통 이력
     private Long createdId;
+
+    @CreationTimestamp
     private Timestamp createdDate;
+
     private Long updatedId;
+
+    @UpdateTimestamp
     private Timestamp updatedDate;
 }

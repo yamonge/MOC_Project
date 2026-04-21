@@ -5,7 +5,7 @@
 [![React Native](https://img.shields.io/badge/React%20Native-0.78.3-61DAFB?logo=react)](https://reactnative.dev/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.9-brightgreen?logo=spring)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-17-orange?logo=java)](https://www.oracle.com/java/)
-[![Oracle DB](https://img.shields.io/badge/Oracle%20DB-11g-red?logo=oracle)](https://www.oracle.com/database/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.x-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 
 ---
 
@@ -120,6 +120,9 @@
 - `@react-native-firebase/messaging`: ^23.7.0 - Firebase Cloud Messaging
 - `@notifee/react-native`: ^9.1.8 - 로컬 알림
 
+#### Configuration & Environment
+- `react-native-config`: ^1.5.3 - 환경변수 관리 (.env)
+
 #### State Management
 - `zustand`: ^5.0.9 - 경량 상태 관리
 
@@ -134,13 +137,13 @@
 - `spring-boot-starter-web` - RESTful API
 - `spring-boot-starter-websocket` - WebSocket 지원
 - `spring-boot-starter-webflux` - 비동기 처리
-- `mybatis-spring-boot-starter`: 3.0.5 - MyBatis ORM
+- `spring-boot-starter-data-jpa` - JPA ORM (Hibernate)
 - `spring-security-crypto` - 비밀번호 암호화 (BCrypt)
 - `spring-boot-starter-mail` - 이메일 발송
 
 #### Database
-- **Oracle Database**: 11g (JDBC Driver: ojdbc11)
-- **MyBatis**: SQL 매퍼
+- **MySQL**: 8.x (JDBC Driver: mysql-connector-j)
+- **Spring Data JPA**: ORM / Repository
 
 #### External APIs & Services
 - **Google Gemini AI**: 1.0.0 - AI 레시피 추천
@@ -155,8 +158,8 @@
 - `jackson-databind` - JSON 처리
 
 ### Database
-- **Oracle Database 11g**
-- **MyBatis XML Mapper** - SQL 쿼리 관리
+- **MySQL 8.x**
+- **Spring Data JPA** - ORM 기반 데이터 접근
 
 ### Infrastructure & DevOps
 - **Firebase**: Cloud Messaging, Storage
@@ -192,14 +195,14 @@
 │  │    ShoppingPostService, ChatService, etc.            │  │
 │  └──────────────────────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  DAO Layer (MyBatis)                                 │  │
+│  │  Repository Layer (Spring Data JPA)                  │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                             │
-                            │ JDBC
+                            │ JPA (Hibernate)
                             │
 ┌─────────────────────────────────────────────────────────────┐
-│                  Oracle Database 11g                        │
+│                      MySQL Database                          │
 │  - Users, Recipes, Ingredients, Shopping Posts,           │
 │    Chat Messages, Notices, Reports, etc.                   │
 └─────────────────────────────────────────────────────────────┘
@@ -284,8 +287,6 @@
         │       │               └── voice/        # 음성 인식
         │       └── resources/
         │           ├── application.yml           # 설정 파일
-        │           ├── mybatis/
-        │           │   └── mappers/             # MyBatis XML 매퍼
         │           └── static/                  # 정적 리소스
         └── build.gradle
 ```
@@ -371,7 +372,7 @@ POST   /api/admin/notices            # 공지사항 작성
 
 #### Backend
 - JDK 17
-- Oracle Database 11g
+- MySQL 8.x
 - Gradle 7.x 이상
 
 ### Frontend 설정
@@ -395,10 +396,10 @@ npm run android
 
 ### Backend 설정
 
-1. **Oracle Database 설정**
-   - Oracle Database 11g 설치 및 실행
+1. **MySQL Database 설정**
+   - MySQL 8.x 설치 및 실행
    - 데이터베이스 및 사용자 생성
-   - 테이블 생성 (DDL 스크립트 실행)
+   - JPA `ddl-auto: update` 설정으로 테이블 자동 생성
 
 2. **설정 파일 수정**
    - `backend/moc/src/main/resources/application.yml` 수정
@@ -435,9 +436,12 @@ GOOGLE_SIGNIN_CLIENT_ID=your_google_client_id
 ```yaml
 spring:
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521:XE
-    username: 서버이름
-    password: 서버비밀번호
+    url: jdbc:mysql://localhost:3306/moc_db?useSSL=false&serverTimezone=Asia/Seoul
+    username: your_username
+    password: your_password
+  jpa:
+    hibernate:
+      ddl-auto: update
 
 server:
   port: 8090
@@ -508,9 +512,9 @@ firebase:
 - ✅ **푸시 알림**: Firebase Cloud Messaging 통합
 
 ### 아키텍처 설계
-- ✅ **계층형 아키텍처**: Controller-Service-DAO 계층 분리
+- ✅ **계층형 아키텍처**: Controller-Service-Repository 계층 분리
 - ✅ **RESTful API**: 표준 REST API 설계 및 구현
-- ✅ **MyBatis ORM**: 효율적인 데이터베이스 쿼리 관리
+- ✅ **Spring Data JPA**: 효율적인 데이터베이스 접근 및 엔티티 관리
 - ✅ **상태 관리**: Zustand를 활용한 경량 상태 관리
 
 ### 사용자 경험
@@ -530,7 +534,7 @@ firebase:
 
 - **프론트엔드 개발**: React Native 모바일 앱 개발
 - **백엔드 개발**: Spring Boot REST API 및 WebSocket 서버 개발
-- **데이터베이스 설계**: Oracle Database 스키마 설계 및 최적화
+- **데이터베이스 설계**: MySQL Database 스키마 설계 및 최적화
 
 ---
 
@@ -540,5 +544,5 @@ firebase:
 
 ---
 
-**마지막 업데이트**: 2026년 1월 02일
+**마지막 업데이트**: 2026년 4월 21일
 

@@ -1,6 +1,6 @@
 package com.cucook.moc.recipe.service.impl;
 
-import com.cucook.moc.recipe.dao.AiRecipeLogDAO;
+import com.cucook.moc.recipe.dao.AiRecipeLogRepository;
 import com.cucook.moc.recipe.service.AiRecipeLogService;
 import com.cucook.moc.recipe.vo.AiRecipeLogVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,28 +12,26 @@ import java.util.List;
 @Service
 public class AiRecipeLogServiceImpl implements AiRecipeLogService {
 
-    private final AiRecipeLogDAO aiRecipeLogDAO;
+    private final AiRecipeLogRepository aiRecipeLogRepository;
 
     @Autowired
-    public AiRecipeLogServiceImpl(AiRecipeLogDAO aiRecipeLogDAO) {
-        this.aiRecipeLogDAO = aiRecipeLogDAO;
+    public AiRecipeLogServiceImpl(AiRecipeLogRepository aiRecipeLogRepository) {
+        this.aiRecipeLogRepository = aiRecipeLogRepository;
     }
 
-    /**
-     * AI 레시피 생성 로그 저장
-     */
     @Override
     @Transactional
     public int saveAiRecipeLog(AiRecipeLogVO aiRecipeLogVO) {
-        return aiRecipeLogDAO.insertAiRecipeLog(aiRecipeLogVO);
+        aiRecipeLogRepository.save(aiRecipeLogVO);
+        return 1;
     }
 
-    /**
-     * AI 레시피 생성 로그 조회
-     */
     @Override
     @Transactional(readOnly = true)
     public List<AiRecipeLogVO> getAiRecipeLogs(AiRecipeLogVO searchVO) {
-        return aiRecipeLogDAO.searchAiRecipeLogs(searchVO);
+        if (searchVO != null && searchVO.getUserId() != null) {
+            return aiRecipeLogRepository.findByUserId(searchVO.getUserId());
+        }
+        return aiRecipeLogRepository.findAll();
     }
 }

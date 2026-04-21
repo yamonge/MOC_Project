@@ -1,13 +1,10 @@
 package com.cucook.moc.user.vo;
 
-import java.sql.Timestamp;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import java.sql.Timestamp;
 
 @Getter
 @Setter
@@ -15,13 +12,30 @@ import lombok.ToString;
 @AllArgsConstructor
 @Builder
 @ToString
+@Entity
+@Table(name = "tb_password_reset_token")
 public class PasswordResetTokenVO {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long resetTokenId;
+
+    @Column(nullable = false)
     private Long userId;
+
+    @Column(nullable = false)
     private String resetToken;
-    private Timestamp expireDate;   // 토큰 만료일
-    private String usedYn;        // 'N' or 'Y'
+
+    @Column(nullable = false)
+    private Timestamp expireDate;
+
+    @Column(nullable = false, length = 1)
+    private String usedYn;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private Timestamp createdDate;
+
+    @Column
     private Timestamp usedDate;
 }

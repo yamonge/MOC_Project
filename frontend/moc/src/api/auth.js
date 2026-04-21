@@ -1,9 +1,10 @@
 import api from './axiosConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
-import axios from 'axios';
+import {Platform} from 'react-native';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
+import Config from 'react-native-config';
 
 /**
  * FCM 토큰 가져오기
@@ -11,11 +12,9 @@ import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
  */
 const getFCMToken = async () => {
   try {
-    const token = await messaging().getToken();
-    console.log('[FCM 토큰 가져오기 성공]', token);
-    return token;
+    return await messaging().getToken();
   } catch (error) {
-    console.error('[FCM 토큰 가져오기 실패]', error);
+    if (__DEV__) console.error('[FCM 토큰 가져오기 실패]', error);
     return null;
   }
 };
@@ -25,10 +24,9 @@ const getFCMToken = async () => {
  */
 export const initGoogleSignIn = () => {
   GoogleSignin.configure({
-    webClientId:
-      '1081675491060-ao6tarullgvoga5n4o2pp33ic7c710di.apps.googleusercontent.com',
+    webClientId: Config.GOOGLE_WEB_CLIENT_ID,
     offlineAccess: true,
-    forceCodeForRefreshToken: true, // refresh token을 위한 설정
+    forceCodeForRefreshToken: true,
   });
 };
 
@@ -41,20 +39,7 @@ export const signInWithGoogle = async () => {
     await GoogleSignin.hasPlayServices();
     const response = await GoogleSignin.signIn();
 
-    console.log(
-      '✅ Google SignIn Full Response:',
-      JSON.stringify(response, null, 2),
-    );
-
-    // 응답 구조: { type: "success", data: { idToken, serverAuthCode, user } }
-    const userInfo = response.data || response; // data 추출
-
-    console.log('✅ Google SignIn Success:', {
-      hasIdToken: !!userInfo.idToken,
-      hasServerAuthCode: !!userInfo.serverAuthCode,
-      idTokenLength: userInfo.idToken?.length,
-      user: userInfo.user,
-    });
+    const userInfo = response.data || response;
 
     // idToken이 없으면 serverAuthCode 사용 시도
     const tokenToUse = userInfo.idToken || userInfo.serverAuthCode;
@@ -125,9 +110,9 @@ export const authAPI = {
         fcmToken: fcmToken, // FCM 토큰 추가
       });
 
-      // 사용자 정보 저장 (닉네임, 이메일, 이름)
-      // response == LoginResponseDTO (flat)
       await AsyncStorage.multiSet([
+        ['accessToken', response?.accessToken ?? ''],
+        ['refreshToken', response?.refreshToken ?? ''],
         ['userId', response?.userId ? String(response.userId) : ''],
         ['userEmail', response?.userEmail ?? ''],
         ['userName', response?.userName ?? ''],
@@ -136,14 +121,9 @@ export const authAPI = {
         ['userStatus', response?.userStatus ?? ''],
       ]);
 
-      return response; // LoginResponseDTO
+      return response;
     } catch (error) {
-      console.error(
-        '로그인 에러:',
-        error?.message,
-        error?.response?.status,
-        error?.response?.data,
-      );
+      if (__DEV__) console.error('로그인 에러:', error?.message, error?.response?.status);
       throw error;
     }
   },
@@ -158,20 +138,16 @@ export const authAPI = {
       // FCM 토큰 가져오기
       const fcmToken = await getFCMToken();
 
-      console.log('📤 Sending to backend:', {
-        idToken: idToken?.substring(0, 50) + '...',
-        hasFcmToken: !!fcmToken,
-      });
-
       const response = await api.post('/auth/google', {
         idToken,
         fcmToken,
-        deviceOs: 'Android', // 또는 Platform.OS
-        deviceVersion: '', // 필요시 Device.getSystemVersion()
+        deviceOs: Platform.OS === 'ios' ? 'iOS' : 'Android',
+        deviceVersion: String(Platform.Version || ''),
       });
 
-      // 사용자 정보 저장 (LoginResponseDTO 구조)
       await AsyncStorage.multiSet([
+        ['accessToken', response?.accessToken ?? ''],
+        ['refreshToken', response?.refreshToken ?? ''],
         ['userId', response?.userId ? String(response.userId) : ''],
         ['userEmail', response?.userEmail ?? ''],
         ['userName', response?.userName ?? ''],
@@ -197,20 +173,16 @@ export const authAPI = {
       // FCM 토큰 가져오기
       const fcmToken = await getFCMToken();
 
-      console.log('📤 Sending to backend:', {
-        accessToken: accessToken?.substring(0, 50) + '...',
-        hasFcmToken: !!fcmToken,
-      });
-
       const response = await api.post('/auth/facebook', {
         accessToken,
         fcmToken,
-        deviceOs: 'Android',
-        deviceVersion: '',
+        deviceOs: Platform.OS === 'ios' ? 'iOS' : 'Android',
+        deviceVersion: String(Platform.Version || ''),
       });
 
-      // 사용자 정보 저장 (LoginResponseDTO 구조)
       await AsyncStorage.multiSet([
+        ['accessToken', response?.accessToken ?? ''],
+        ['refreshToken', response?.refreshToken ?? ''],
         ['userId', response?.userId ? String(response.userId) : ''],
         ['userEmail', response?.userEmail ?? ''],
         ['userName', response?.userName ?? ''],
@@ -299,16 +271,7 @@ export const authAPI = {
    */
   getCurrentUser: async () => {
     try {
-      // AsyncStorage에서 userId 가져오기
-      const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        throw new Error('로그인 정보가 없습니다.');
-      }
-
-      const response = await api.get('/auth/me', {
-        params: {userId},
-      });
-
+      const response = await api.get('/auth/me');
       return response;
     } catch (error) {
       console.error('사용자 정보 조회 에러:', error);

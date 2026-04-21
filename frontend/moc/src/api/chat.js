@@ -10,11 +10,9 @@ import {normalizeImageUrl} from '../utils/imageUrlHelper';
  * @param {number} userId - 사용자 ID
  * @returns {Promise<Array>} 채팅방 목록
  */
-export const getMyChatRooms = async userId => {
+export const getMyChatRooms = async () => {
   try {
-    const response = await axiosInstance.get('/chat/rooms/me', {
-      params: {userId},
-    });
+    const response = await axiosInstance.get('/chat/rooms/me');
     return response;
   } catch (error) {
     console.error('채팅방 목록 조회 실패:', error);
@@ -88,11 +86,9 @@ export const getChatRoomParticipants = async chatRoomId => {
  * @param {number} userId - 사용자 ID
  * @returns {Promise<void>}
  */
-export const leaveChatRoom = async (chatRoomId, userId) => {
+export const leaveChatRoom = async chatRoomId => {
   try {
-    await axiosInstance.post(`/chat/rooms/${chatRoomId}/leave`, null, {
-      params: {userId},
-    });
+    await axiosInstance.post(`/chat/rooms/${chatRoomId}/leave`);
   } catch (error) {
     console.error('채팅방 나가기 실패:', error);
     throw error;
@@ -105,11 +101,9 @@ export const leaveChatRoom = async (chatRoomId, userId) => {
  * @param {number} userId - 사용자 ID (방장 확인용)
  * @returns {Promise<void>}
  */
-export const deleteChatRoom = async (chatRoomId, userId) => {
+export const deleteChatRoom = async chatRoomId => {
   try {
-    await axiosInstance.delete(`/chat/rooms/${chatRoomId}`, {
-      params: {userId},
-    });
+    await axiosInstance.delete(`/chat/rooms/${chatRoomId}`);
   } catch (error) {
     console.error('채팅방 삭제 실패:', error);
     throw error;
@@ -123,14 +117,10 @@ export const deleteChatRoom = async (chatRoomId, userId) => {
  * @param {number} requestUserId - 요청자 ID (방장 확인용)
  * @returns {Promise<void>}
  */
-export const kickParticipant = async (
-  chatRoomId,
-  kickUserId,
-  requestUserId,
-) => {
+export const kickParticipant = async (chatRoomId, kickUserId) => {
   try {
     await axiosInstance.post(`/chat/rooms/${chatRoomId}/kick`, null, {
-      params: {kickUserId, requestUserId},
+      params: {kickUserId},
     });
   } catch (error) {
     console.error('참여자 강퇴 실패:', error);

@@ -1,16 +1,34 @@
 package com.cucook.moc.recipe.vo;
 
+import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.sql.Timestamp;
 
 @Data
+@Entity
+@Table(name = "tb_recipe_step")
 public class RecipeStepVO {
 
-    private Long recipeStepId;      // 레시피 단계 ID (Oracle 시퀀스 사용)
-    private Long recipeId;          // 레시피 ID (어떤 레시피의 단계인지 연결)
-    private Integer stepNo;         // 단계 번호 (1, 2, 3...)
-    private String stepDesc;        // 단계 설명
-    private String imageUrl;        // 단계별 이미지 URL
-    private Long createdId;       // 생성자 ID
-    private Timestamp createdDate;  // 생성 일시 (DB 자동 입력)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long recipeStepId;
+
+    @Column(nullable = false)
+    private Long recipeId;
+
+    @Column(nullable = false)
+    private Integer stepNo;
+
+    @Column(length = 2000)
+    private String stepDesc;
+
+    @Column(length = 500)
+    private String imageUrl;
+
+    private Long createdId;
+
+    @CreationTimestamp
+    private Timestamp createdDate;
 }

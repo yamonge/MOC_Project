@@ -61,7 +61,7 @@ export const addIngredient = async (
       usedFlag: 'N',
       memo: null,
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('재료 추가 실패:', error);
     throw error;

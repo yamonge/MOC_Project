@@ -139,8 +139,12 @@ export default function ProfileScreen({navigation}) {
             await AsyncStorage.multiRemove([
               'accessToken',
               'refreshToken',
-              'userNickname',
+              'userId',
               'userEmail',
+              'userName',
+              'userNickname',
+              'userType',
+              'userStatus',
               'profileImage',
             ]);
             navigation.reset({

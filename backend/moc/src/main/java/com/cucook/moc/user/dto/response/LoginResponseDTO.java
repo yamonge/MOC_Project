@@ -19,4 +19,6 @@ public class LoginResponseDTO {
     private String userNickname;
     private String userType;
     private String userStatus;
+    private String accessToken;
+    private String refreshToken;
 }

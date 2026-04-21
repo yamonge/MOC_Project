@@ -3,6 +3,7 @@ package com.cucook.moc.shopping.service;
 import com.cucook.moc.shopping.dao.ShoppingPostDAO;
 import com.cucook.moc.shopping.dto.ShoppingPostCreateRequestDTO;
 import com.cucook.moc.shopping.dto.ShoppingPostDetailDTO;
+import com.cucook.moc.shopping.dto.ShoppingPostDetailProjection;
 import com.cucook.moc.shopping.dto.ShoppingPostSummaryDTO;
 import com.cucook.moc.shopping.vo.ShoppingPostVO;
 import com.cucook.moc.chat.service.ShoppingChatRoomService;
@@ -30,7 +31,7 @@ public class ShoppingPostService {
 
         Integer personCntMax = dto.getMaxPersonCnt();
 
-        if (personCntMax == null) personCntMax = 2;            // ✅ 기본값
+        if (personCntMax == null) personCntMax = 2;
         if (personCntMax < 2) throw new IllegalArgumentException("최대 인원은 2명 이상이어야 합니다.");
         if (personCntMax > 5) throw new IllegalArgumentException("최대 인원은 5명을 초과할 수 없습니다.");
         if (dto.getMeetDateTime() == null) {
@@ -39,7 +40,6 @@ public class ShoppingPostService {
 
         Timestamp meetTs = new Timestamp(dto.getMeetDateTime());
         
-        // 🔥 시간 검증: 현재 시간보다 1시간 이후여야 함
         Timestamp now = new Timestamp(System.currentTimeMillis());
         Timestamp oneHourLater = new Timestamp(now.getTime() + (60 * 60 * 1000));
         
@@ -47,8 +47,6 @@ public class ShoppingPostService {
             throw new IllegalArgumentException("만날 시간은 현재 시간으로부터 최소 1시간 이후여야 합니다.");
         }
 
-
-        // 2) 게시글 VO 구성
         ShoppingPostVO postVO = new ShoppingPostVO();
         postVO.setWriterUserId(writerUserId);
         postVO.setMeetDatetime(meetTs);
@@ -65,18 +63,15 @@ public class ShoppingPostService {
 
         postVO.setCreatedId(writerUserId);
 
-        // 게시글 INSERT
-        shoppingPostDAO.insertPost(postVO);
-        Long postId = postVO.getShoppingPostId();
+        ShoppingPostVO saved = shoppingPostDAO.save(postVO);
+        Long postId = saved.getShoppingPostId();
 
-        // 카테고리 저장 INSERT
         if (dto.getCategoryCodes() != null) {
             for (String cd : dto.getCategoryCodes()) {
                 shoppingPostDAO.insertPostCategory(postId, cd);
             }
         }
 
-        //  채팅방 생성 + 작성자 참여
         shoppingChatRoomService.createRoomForPost(postId, writerUserId);
 
         return postId;
@@ -103,7 +98,7 @@ public class ShoppingPostService {
      */
     @Transactional(readOnly = true)
     public List<ShoppingPostSummaryDTO> getPostsForPlace(double lat, double lng, Long userId) {
-        double latDiff = 0.001; // 약 100m 박스
+        double latDiff = 0.001;
         double lngDiff = 0.001;
 
         double latMin = lat - latDiff;
@@ -114,18 +109,31 @@ public class ShoppingPostService {
         return shoppingPostDAO.selectPostsByPlace(lat, lng, latMin, latMax, lngMin, lngMax, userId);
     }
 
-    // 게시물 상세정보
     @Transactional(readOnly = true)
     public ShoppingPostDetailDTO getPostDetail(Long postId) {
-        ShoppingPostDetailDTO detail = shoppingPostDAO.selectPostDetail(postId);
-        if (detail != null) {
-            detail.setCategoryCodes(shoppingPostDAO.selectCategoryCodesByPostId(postId));
-        }
+        ShoppingPostDetailProjection p = shoppingPostDAO.selectPostDetail(postId);
+        if (p == null) return null;
+
+        ShoppingPostDetailDTO detail = new ShoppingPostDetailDTO();
+        detail.setShoppingPostId(p.getShoppingPostId());
+        detail.setWriterUserId(p.getWriterUserId());
+        detail.setWriterNickname(p.getWriterNickname());
+        detail.setPlaceName(p.getPlaceName());
+        detail.setPlaceAddress(p.getPlaceAddress());
+        detail.setLatitude(p.getLatitude());
+        detail.setLongitude(p.getLongitude());
+        detail.setMeetDatetime(p.getMeetDatetime());
+        detail.setMinPersonCnt(p.getMinPersonCnt());
+        detail.setMaxPersonCnt(p.getMaxPersonCnt());
+        detail.setCurrentPersonCnt(p.getCurrentPersonCnt());
+        detail.setStatusCd(p.getStatusCd());
+        detail.setDescription(p.getDescription());
+        detail.setCategoryCodes(shoppingPostDAO.selectCategoryCodesByPostId(postId));
         return detail;
     }
 
     @Transactional(readOnly = true)
     public ShoppingPostVO getPost(Long postId) {
-        return shoppingPostDAO.selectById(postId);
+        return shoppingPostDAO.findById(postId).orElse(null);
     }
 }

@@ -1,24 +1,35 @@
 package com.cucook.moc.shopping.dao;
 
 import com.cucook.moc.shopping.vo.ShoppingPostVO;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
-@Mapper
-public interface ShoppingPostJoinDAO {
+import java.util.Optional;
 
-    // 참여 시, 인원/상태 체크 위해 게시글 한 건 조회 (FOR UPDATE)
-    ShoppingPostVO selectPostForUpdate(@Param("postId") Long postId);
+public interface ShoppingPostJoinDAO extends JpaRepository<ShoppingPostVO, Long> {
 
-    // current_person_cnt + 1
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM ShoppingPostVO s WHERE s.shoppingPostId = :postId")
+    Optional<ShoppingPostVO> selectPostForUpdate(@Param("postId") Long postId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE ShoppingPostVO s SET s.currentPersonCnt = s.currentPersonCnt + 1 " +
+            "WHERE s.shoppingPostId = :postId")
     int increaseCurrentPersonCnt(@Param("postId") Long postId);
 
-    // current_person_cnt - 1
+    @Modifying
+    @Transactional
+    @Query("UPDATE ShoppingPostVO s SET s.currentPersonCnt = s.currentPersonCnt - 1 " +
+            "WHERE s.shoppingPostId = :postId AND s.currentPersonCnt > 0")
     int decreaseCurrentPersonCnt(@Param("postId") Long postId);
 
-    // 게시글에 매핑된 채팅방 ID 조회
+    @Query(value = "SELECT chat_room_id FROM tb_shopping_chat_room " +
+            "WHERE shopping_post_id = :postId", nativeQuery = true)
     Long selectChatRoomIdByPostId(@Param("postId") Long postId);
-
-    ShoppingPostVO selectById(@Param("postId") Long postId);
 }
-

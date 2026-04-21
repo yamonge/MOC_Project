@@ -45,7 +45,7 @@ export const requestNotificationPermission = async () => {
       return settings.authorizationStatus >= 1; // 1 = Authorized
     }
   } catch (error) {
-    console.error('[알림 권한 요청 실패]', error);
+    if (__DEV__) console.error('[알림 권한 요청 실패]', error);
     return false;
   }
 };
@@ -56,9 +56,9 @@ export const requestNotificationPermission = async () => {
 export const initNotification = async () => {
   try {
     await createNotificationChannel();
-    console.log('[Notifee 초기화 완료]');
+    if (__DEV__) console.log('[Notifee 초기화 완료]');
   } catch (error) {
-    console.error('[Notifee 초기화 실패]', error);
+    if (__DEV__) console.error('[Notifee 초기화 실패]', error);
   }
 };
 
@@ -81,9 +81,8 @@ export const scheduleMeetingNotification = async (
     const notificationTime = new Date(meetTimeDate.getTime() - 30 * 60 * 1000);
     const now = new Date();
 
-    // 이미 지난 시간인지 체크
     if (notificationTime <= now) {
-      console.warn('[알림 시간 지남] 알림을 예약할 수 없습니다.');
+      if (__DEV__) console.warn('[알림 시간 지남] 알림을 예약할 수 없습니다.');
       return null;
     }
 
@@ -115,14 +114,11 @@ export const scheduleMeetingNotification = async (
       },
     );
 
-    console.log('[알림 예약 완료]', {
-      notificationId,
-      scheduledTime: notificationTime.toISOString(),
-    });
+    if (__DEV__) console.log('[알림 예약 완료]', {notificationId, scheduledTime: notificationTime.toISOString()});
 
     return notificationId;
   } catch (error) {
-    console.error('[알림 예약 실패]', error);
+    if (__DEV__) console.error('[알림 예약 실패]', error);
     return null;
   }
 };
@@ -135,9 +131,9 @@ export const cancelMeetingNotification = async postId => {
   try {
     const notificationId = `meeting-${postId}`;
     await notifee.cancelNotification(notificationId);
-    console.log('[알림 취소 완료]', notificationId);
+    if (__DEV__) console.log('[알림 취소 완료]', notificationId);
   } catch (error) {
-    console.error('[알림 취소 실패]', error);
+    if (__DEV__) console.error('[알림 취소 실패]', error);
   }
 };
 
@@ -165,9 +161,9 @@ export const displayFCMNotification = async remoteMessage => {
       data: remoteMessage.data, // 클릭 이벤트에서 사용할 데이터
     });
 
-    console.log('[FCM 알림 표시 완료]', remoteMessage.notification?.title);
+    if (__DEV__) console.log('[FCM 알림 표시 완료]', remoteMessage.notification?.title);
   } catch (error) {
-    console.error('[FCM 알림 표시 실패]', error);
+    if (__DEV__) console.error('[FCM 알림 표시 실패]', error);
   }
 };
 
@@ -176,20 +172,18 @@ export const displayFCMNotification = async remoteMessage => {
  */
 export const setupFCM = async () => {
   try {
-    // 알림 권한 요청
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.warn('[FCM] 알림 권한이 없습니다.');
+      if (__DEV__) console.warn('[FCM] 알림 권한이 없습니다.');
       return;
     }
 
-    // FCM Token 확인
     const fcmToken = await messaging().getToken();
-    console.log('[FCM Token]', fcmToken);
+    if (__DEV__) console.log('[FCM Token]', fcmToken);
 
     return fcmToken;
   } catch (error) {
-    console.error('[FCM 초기화 실패]', error);
+    if (__DEV__) console.error('[FCM 초기화 실패]', error);
     return null;
   }
 };

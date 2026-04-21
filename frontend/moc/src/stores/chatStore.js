@@ -54,7 +54,7 @@ const useChatStore = create((set, get) => ({
    * @param {boolean} status - 연결 상태
    */
   setConnected: status => {
-    console.log('📡 [chatStore] 연결 상태 변경:', status);
+    if (__DEV__) console.log('[chatStore] 연결 상태 변경:', status);
     set({isConnected: status});
   },
 
@@ -63,7 +63,7 @@ const useChatStore = create((set, get) => ({
    * @param {object} user - { userId, nickname }
    */
   setCurrentUser: user => {
-    console.log('👤 [chatStore] 사용자 정보 설정:', user);
+    if (__DEV__) console.log('[chatStore] 사용자 정보 설정:', user);
     set({currentUser: user});
   },
 
@@ -74,7 +74,7 @@ const useChatStore = create((set, get) => ({
   setChatRooms: rooms => {
     // 배열 검증 (방어 코드)
     const validRooms = Array.isArray(rooms) ? rooms : [];
-    console.log('📋 [chatStore] 채팅방 목록 설정:', validRooms.length, '개');
+    if (__DEV__) console.log('[chatStore] 채팅방 목록 설정:', validRooms.length, '개');
     set({chatRooms: validRooms});
   },
 
@@ -83,7 +83,7 @@ const useChatStore = create((set, get) => ({
    * @param {object} room - 채팅방 정보
    */
   addChatRoom: room => {
-    console.log('➕ [chatStore] 채팅방 추가:', room.placeName);
+    if (__DEV__) console.log('[chatStore] 채팅방 추가:', room.placeName);
     set(state => ({
       chatRooms: [room, ...state.chatRooms],
     }));
@@ -95,7 +95,7 @@ const useChatStore = create((set, get) => ({
    * @param {object} updates - 업데이트할 필드 { lastMessage, unreadCount, ... }
    */
   updateChatRoom: (roomId, updates) => {
-    console.log('🔄 [chatStore] 채팅방 업데이트:', roomId, updates);
+    if (__DEV__) console.log('[chatStore] 채팅방 업데이트:', roomId, updates);
     set(state => ({
       chatRooms: state.chatRooms.map(room =>
         room.chatRoomId === roomId ? {...room, ...updates} : room,
@@ -108,7 +108,7 @@ const useChatStore = create((set, get) => ({
    * @param {number} roomId - 채팅방 ID
    */
   removeChatRoom: roomId => {
-    console.log('🗑️ [chatStore] 채팅방 삭제:', roomId);
+    if (__DEV__) console.log('[chatStore] 채팅방 삭제:', roomId);
     set(state => ({
       chatRooms: state.chatRooms.filter(room => room.chatRoomId !== roomId),
       messages: {
@@ -124,12 +124,7 @@ const useChatStore = create((set, get) => ({
    * @param {Array} messageList - 메시지 목록
    */
   setMessages: (roomId, messageList) => {
-    console.log(
-      '💬 [chatStore] 메시지 설정:',
-      roomId,
-      messageList.length,
-      '개',
-    );
+    if (__DEV__) console.log('[chatStore] 메시지 설정:', roomId, messageList.length, '개');
     set(state => ({
       messages: {
         ...state.messages,
@@ -144,18 +139,17 @@ const useChatStore = create((set, get) => ({
    * @param {object} message - 메시지 객체
    */
   addMessage: (roomId, message) => {
-    console.log('📨 [chatStore] 메시지 추가:', roomId, message.messageText);
+    if (__DEV__) console.log('[chatStore] 메시지 추가:', roomId, message.messageText);
 
     set(state => {
       const currentMessages = state.messages[roomId] || [];
 
-      // 중복 메시지 방지 (messageId 기준)
       const isDuplicate = currentMessages.some(
         msg => msg.messageId === message.messageId,
       );
 
       if (isDuplicate) {
-        console.log('⚠️ [chatStore] 중복 메시지 무시:', message.messageId);
+        if (__DEV__) console.log('[chatStore] 중복 메시지 무시:', message.messageId);
         return state;
       }
 
@@ -181,7 +175,7 @@ const useChatStore = create((set, get) => ({
    * @param {number} count - 증가할 개수 (기본 1)
    */
   incrementUnreadCount: (roomId, count = 1) => {
-    console.log('🔔 [chatStore] 미읽은 메시지 증가:', roomId, `+${count}`);
+    if (__DEV__) console.log('[chatStore] 미읽은 메시지 증가:', roomId, `+${count}`);
     set(state => ({
       chatRooms: state.chatRooms.map(room =>
         room.chatRoomId === roomId
@@ -196,7 +190,7 @@ const useChatStore = create((set, get) => ({
    * @param {number} roomId - 채팅방 ID
    */
   resetUnreadCount: roomId => {
-    console.log('✅ [chatStore] 미읽은 메시지 초기화:', roomId);
+    if (__DEV__) console.log('[chatStore] 미읽은 메시지 초기화:', roomId);
     set(state => ({
       chatRooms: state.chatRooms.map(room =>
         room.chatRoomId === roomId ? {...room, unreadCount: 0} : room,
@@ -209,7 +203,7 @@ const useChatStore = create((set, get) => ({
    * @param {number} roomId - 채팅방 ID
    */
   setActiveRoom: roomId => {
-    console.log('🎯 [chatStore] 활성 채팅방 설정:', roomId);
+    if (__DEV__) console.log('[chatStore] 활성 채팅방 설정:', roomId);
     set({activeRoomId: roomId});
 
     // 활성화 시 미읽은 메시지 초기화
@@ -222,7 +216,7 @@ const useChatStore = create((set, get) => ({
    * 전체 초기화 (로그아웃 시)
    */
   reset: () => {
-    console.log('🔄 [chatStore] 전체 초기화');
+    if (__DEV__) console.log('[chatStore] 전체 초기화');
     set({
       isConnected: false,
       currentUser: {userId: null, nickname: null},

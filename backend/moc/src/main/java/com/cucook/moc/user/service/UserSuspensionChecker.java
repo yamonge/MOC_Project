@@ -1,6 +1,6 @@
 package com.cucook.moc.user.service;
 
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.sql.Timestamp;
@@ -8,7 +8,7 @@ import java.sql.Timestamp;
 @RequiredArgsConstructor
 public class UserSuspensionChecker {
 
-    private final UserDAO userDAO;
+    private final UserRepository userRepository;
 
     /**
      * 정책:
@@ -30,7 +30,7 @@ public class UserSuspensionChecker {
         }
 
         // ✅ 3) SUSPENDED + 만료 => 자동복구 후 정상 처리
-        int restored = userDAO.restoreExpiredSuspensionToActive(userId);
+        int restored = userRepository.restoreExpiredSuspensionToActive(userId);
         if (restored > 0) {
             return;
         }

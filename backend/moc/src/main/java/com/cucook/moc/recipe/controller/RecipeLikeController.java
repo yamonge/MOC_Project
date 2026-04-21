@@ -6,16 +6,16 @@ import com.cucook.moc.recipe.service.RecipeLikeService; // 서비스 주입
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import java.util.List; // RecipeLikeListResponseDTO 내부에서 사용되므로 필요
+import java.util.List;
 
 /**
  * 사용자 레시피 좋아요 기능에 대한 REST API를 처리하는 컨트롤러입니다.
  * 마이페이지의 '좋아요한 게시물' 탭 기능을 담당합니다.
  */
-@RestController // RESTful API를 위한 컨트롤러임을 선언
-@RequestMapping("/api/v1/users/{userId}/likes") // 사용자별 좋아요 관리를 위한 기본 URL 경로
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정 (모든 오리진 허용)
+@RestController
+@RequestMapping("/api/v1/users/{userId}/likes")
 public class RecipeLikeController {
 
     private final RecipeLikeService recipeLikeService;
@@ -35,18 +35,17 @@ public class RecipeLikeController {
      */
     @PostMapping
     public ResponseEntity<Boolean> toggleRecipeLike(
-            @PathVariable("userId") Long userId,
-            @RequestBody RecipeLikeRequestDTO requestDTO) {
+            @PathVariable("userId") Long ignoredUserId,
+            @RequestBody RecipeLikeRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             boolean isLiked = recipeLikeService.toggleRecipeLike(userId, requestDTO);
-            return new ResponseEntity<>(isLiked, HttpStatus.OK); // 200 OK (좋아요 추가되면 true, 취소되면 false)
+            return new ResponseEntity<>(isLiked, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 좋아요 토글 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request (존재하지 않는 레시피 ID 등)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("레시피 좋아요 토글 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -59,11 +58,10 @@ public class RecipeLikeController {
      */
     @GetMapping
     public ResponseEntity<RecipeLikeListResponseDTO> getLikedRecipes(
-            @PathVariable("userId") Long userId) {
-
-        RecipeLikeListResponseDTO response =
-                recipeLikeService.getLikedRecipes(userId);
-
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        RecipeLikeListResponseDTO response = recipeLikeService.getLikedRecipes(userId);
         return ResponseEntity.ok(response);
     }
 
@@ -77,15 +75,15 @@ public class RecipeLikeController {
      */
     @GetMapping("/check/{recipeId}")
     public ResponseEntity<Boolean> isRecipeLiked(
-            @PathVariable("userId") Long userId,
-            @PathVariable("recipeId") Long recipeId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("recipeId") Long recipeId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             boolean isLiked = recipeLikeService.isRecipeLiked(userId, recipeId);
-            return new ResponseEntity<>(isLiked, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(isLiked, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("레시피 좋아요 상태 확인 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -98,14 +96,14 @@ public class RecipeLikeController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countLikedRecipes(
-            @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             int count = recipeLikeService.countLikedRecipes(userId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("좋아요 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

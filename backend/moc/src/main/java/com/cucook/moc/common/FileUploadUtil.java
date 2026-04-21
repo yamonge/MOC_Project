@@ -1,5 +1,7 @@
 package com.cucook.moc.common;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +19,8 @@ import java.util.UUID;
  */
 @Component
 public class FileUploadUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(FileUploadUtil.class);
 
     private final String serverBaseUrl;
     private final String uploadBaseDir;
@@ -38,9 +42,9 @@ public class FileUploadUtil {
         // 디렉토리 생성
         try {
             Files.createDirectories(uploadPath);
-            System.out.println("✅ 업로드 디렉토리: " + uploadPath.toAbsolutePath());
+            log.info("업로드 디렉토리: {}", uploadPath.toAbsolutePath());
         } catch (IOException e) {
-            System.err.println("❌ 업로드 디렉토리 생성 실패: " + uploadPath + " - " + e.getMessage());
+            log.error("업로드 디렉토리 생성 실패: {} - {}", uploadPath, e.getMessage());
         }
     }
     
@@ -131,7 +135,7 @@ public class FileUploadUtil {
             }
         } catch (IOException e) {
             // 로그만 남기고 예외는 무시 (파일이 이미 없을 수도 있음)
-            System.err.println("파일 삭제 실패: " + fileUrl + " - " + e.getMessage());
+            log.error("파일 삭제 실패: {} - {}", fileUrl, e.getMessage());
         }
         return false;
     }

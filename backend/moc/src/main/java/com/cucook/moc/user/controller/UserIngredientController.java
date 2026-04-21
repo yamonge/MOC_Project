@@ -8,6 +8,7 @@ import com.cucook.moc.user.service.UserIngredientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/users/{userId}/ingredients")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class UserIngredientController {
 
     private final UserIngredientService userIngredientService;
@@ -38,21 +38,17 @@ public class UserIngredientController {
      */
     @PostMapping
     public ResponseEntity<UserIngredientResponseDTO> addUserIngredient(
-            @PathVariable("userId") Long userId,
-            @RequestBody UserIngredientRequestDTO requestDTO) {
-        System.out.println("🔥 addUserIngredient userId=" + userId);
-        System.out.println("🔥 requestDTO=" + requestDTO);
+            @PathVariable("userId") Long ignoredUserId,
+            @RequestBody UserIngredientRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             UserIngredientResponseDTO response = userIngredientService.addUserIngredient(userId, requestDTO);
-            return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            // 입력 데이터 유효성 검사 실패 등 클라이언트 요청 오류
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            // 기타 예상치 못한 서버 오류
-            System.err.println("재료 추가 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -65,12 +61,11 @@ public class UserIngredientController {
      */
     @GetMapping
     public ResponseEntity<UserIngredientListResponseDTO> getUserIngredients(
-            @PathVariable Long userId) {
-
+            @PathVariable Long userId,
+            Authentication authentication) {
+        Long authUserId = Long.parseLong(authentication.getName());
         UserIngredientListResponseDTO response =
-                userIngredientService.getUserIngredients(userId);
-
-        // ✅ 재료가 없어도 정상 응답
+                userIngredientService.getUserIngredients(authUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -84,18 +79,17 @@ public class UserIngredientController {
      */
     @GetMapping("/{userIngredientId}")
     public ResponseEntity<UserIngredientResponseDTO> getUserIngredientDetail(
-            @PathVariable("userId") Long userId,
-            @PathVariable("userIngredientId") Long userIngredientId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("userIngredientId") Long userIngredientId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             UserIngredientResponseDTO response = userIngredientService.getUserIngredientDetail(userId, userIngredientId);
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            // 재료를 찾을 수 없거나 권한이 없을 경우
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden (권한 문제) 또는 404 Not Found (자원 없음)
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         } catch (Exception e) {
-            System.err.println("재료 상세 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -110,20 +104,18 @@ public class UserIngredientController {
      */
     @PutMapping("/{userIngredientId}")
     public ResponseEntity<UserIngredientResponseDTO> updateUserIngredient(
-            @PathVariable("userId") Long userId,
+            @PathVariable("userId") Long ignoredUserId,
             @PathVariable("userIngredientId") Long userIngredientId,
-            @RequestBody UserIngredientRequestDTO requestDTO) {
+            @RequestBody UserIngredientRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             UserIngredientResponseDTO response = userIngredientService.updateUserIngredient(userId, userIngredientId, requestDTO);
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            // 재료를 찾을 수 없거나 권한이 없거나 입력 데이터 유효성 문제
-            System.err.println("재료 수정 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("재료 수정 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -137,22 +129,21 @@ public class UserIngredientController {
      */
     @DeleteMapping("/{userIngredientId}")
     public ResponseEntity<Void> deleteUserIngredient(
-            @PathVariable("userId") Long userId,
-            @PathVariable("userIngredientId") Long userIngredientId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("userIngredientId") Long userIngredientId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             boolean deleted = userIngredientService.deleteUserIngredient(userId, userIngredientId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            // 재료를 찾을 수 없거나 권한이 없을 경우
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         } catch (Exception e) {
-            System.err.println("재료 삭제 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -165,13 +156,13 @@ public class UserIngredientController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countUserIngredients(
-            @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             int count = userIngredientService.countUserIngredients(userId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("재료 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -185,34 +176,33 @@ public class UserIngredientController {
      */
     @PostMapping("/from-receipt")
     public ResponseEntity<List<UserIngredientResponseDTO>> addIngredientsFromReceipt(
-            @PathVariable("userId") Long userId,
-            @RequestBody List<String> ingredientNames) {
+            @PathVariable("userId") Long ignoredUserId,
+            @RequestBody List<String> ingredientNames,
+            Authentication authentication) {
         try {
-            // createdId는 userId와 동일하게 설정
+            Long userId = Long.parseLong(authentication.getName());
             List<UserIngredientResponseDTO> responses = userIngredientService.addIngredientsFromRecognizedReceipt(userId, ingredientNames, userId);
             if (responses.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
             return new ResponseEntity<>(responses, HttpStatus.CREATED);
         } catch (Exception e) {
-            System.err.println("영수증 인식 재료를 내 재료로 추가 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PostMapping("/consume")
     public ResponseEntity<Void> consumeIngredients(
-            @PathVariable("userId") Long userId,
-            @RequestBody IngredientConsumeRequestDTO requestDTO
-    ) {
+            @PathVariable("userId") Long ignoredUserId,
+            @RequestBody IngredientConsumeRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             userIngredientService.consumeIngredients(userId, requestDTO);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

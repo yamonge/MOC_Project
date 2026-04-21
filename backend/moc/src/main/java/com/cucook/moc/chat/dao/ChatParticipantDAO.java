@@ -1,35 +1,58 @@
 package com.cucook.moc.chat.dao;
 
 import com.cucook.moc.chat.dto.ChatParticipantDTO;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import com.cucook.moc.chat.vo.ChatParticipantVO;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Mapper
-public interface ChatParticipantDAO {
+public interface ChatParticipantDAO extends JpaRepository<ChatParticipantVO, Long> {
 
-    // 참여자 등록용
-    void insertParticipant(@Param("chatRoomId") Long chatRoomId,
-                           @Param("userId") Long userId);
-
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END " +
+            "FROM ChatParticipantVO p " +
+            "WHERE p.chatRoomId = :chatRoomId AND p.userId = :userId AND p.leaveDate IS NULL")
     boolean existsByRoomAndUser(@Param("chatRoomId") Long chatRoomId,
                                 @Param("userId") Long userId);
 
-    //  채팅방 참가자 목록 (닉네임/평점 조회용)
+    @Query(value = "SELECT " +
+            "p.user_id AS userId, " +
+            "u.user_nickname AS nickname, " +
+            "u.rating_score AS ratingScore, " +
+            "u.user_profile_image_url AS profileImageUrl, " +
+            "CASE WHEN sp.writer_user_id = p.user_id THEN true ELSE false END AS isOwner " +
+            "FROM tb_shopping_participant p " +
+            "JOIN tb_user u ON p.user_id = u.user_id " +
+            "JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id " +
+            "JOIN tb_shopping_post sp ON r.shopping_post_id = sp.shopping_post_id " +
+            "WHERE p.chat_room_id = :chatRoomId AND p.leave_date IS NULL", nativeQuery = true)
     List<ChatParticipantDTO> selectParticipantInfos(@Param("chatRoomId") Long chatRoomId);
 
-    // 특정 장보기(shopping_post)에 해당 유저가 참여했는지 여부
+    @Query(value = "SELECT CASE WHEN COUNT(*) > 0 THEN true ELSE false END " +
+            "FROM tb_shopping_participant p " +
+            "JOIN tb_shopping_chat_room r ON p.chat_room_id = r.chat_room_id " +
+            "WHERE r.shopping_post_id = :shoppingPostId " +
+            "AND p.user_id = :userId AND p.leave_date IS NULL", nativeQuery = true)
     boolean existsByPostAndUser(@Param("shoppingPostId") Long shoppingPostId,
                                 @Param("userId") Long userId);
 
-    // 채팅방 참여자 UserId 목록 조회 (발신자 제외용)
+    @Query("SELECT p.userId FROM ChatParticipantVO p " +
+            "WHERE p.chatRoomId = :chatRoomId AND p.leaveDate IS NULL")
     List<Long> selectUserIdsByRoom(@Param("chatRoomId") Long chatRoomId);
 
-    // 참여자 나가기 (퇴장 시간 업데이트)
+    @Modifying
+    @Transactional
+    @Query("UPDATE ChatParticipantVO p SET p.leaveDate = CURRENT_TIMESTAMP " +
+            "WHERE p.chatRoomId = :chatRoomId AND p.userId = :userId")
     void updateLeaveDate(@Param("chatRoomId") Long chatRoomId,
-                        @Param("userId") Long userId);
+                         @Param("userId") Long userId);
 
-    // 전체 참여자 강퇴 (방 삭제 시)
+    @Modifying
+    @Transactional
+    @Query("UPDATE ChatParticipantVO p SET p.leaveDate = CURRENT_TIMESTAMP " +
+            "WHERE p.chatRoomId = :chatRoomId AND p.leaveDate IS NULL")
     void bulkUpdateLeaveDate(@Param("chatRoomId") Long chatRoomId);
 }

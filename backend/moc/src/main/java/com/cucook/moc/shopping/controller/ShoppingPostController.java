@@ -7,6 +7,7 @@ import com.cucook.moc.shopping.service.ShoppingPostJoinService;
 import com.cucook.moc.shopping.service.ShoppingPostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,12 +27,10 @@ public class ShoppingPostController {
 
     @PostMapping
     public ResponseEntity<Long> createPost(
-            @RequestParam("userId") Long userId,
+            Authentication authentication,
             @RequestBody ShoppingPostCreateRequestDTO dto
     ) {
-        if (userId == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        Long userId = Long.parseLong(authentication.getName());
         Long postId = shoppingPostService.createPost(userId, dto);
         return ResponseEntity.ok(postId);
     }
@@ -63,11 +62,9 @@ public class ShoppingPostController {
     @PostMapping("/{postId}/join")
     public ResponseEntity<Long> joinPost(
             @PathVariable Long postId,
-            @RequestParam("userId") Long userId
+            Authentication authentication
     ) {
-        if (userId == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        Long userId = Long.parseLong(authentication.getName());
         Long chatRoomId = shoppingPostJoinService.joinPost(postId, userId);
         return ResponseEntity.ok(chatRoomId);
     }
@@ -81,8 +78,9 @@ public class ShoppingPostController {
     public ResponseEntity<List<ShoppingPostSummaryDTO>> getPostsByPlace(
             @RequestParam("lat") double lat,
             @RequestParam("lng") double lng,
-            @RequestParam("userId") Long userId
+            Authentication authentication
     ) {
+        Long userId = Long.parseLong(authentication.getName());
         List<ShoppingPostSummaryDTO> list = shoppingPostService.getPostsForPlace(lat, lng, userId);
         return ResponseEntity.ok(list);
     }

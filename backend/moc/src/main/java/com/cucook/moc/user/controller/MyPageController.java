@@ -4,6 +4,7 @@ import com.cucook.moc.user.dto.response.MyPageCountResponseDTO;
 import com.cucook.moc.user.dto.response.MyPageReportItemDTO;
 import com.cucook.moc.user.service.MyPageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,13 +17,18 @@ public class MyPageController {
     private final MyPageService myPageService;
 
     @GetMapping("/{userId}/mypage/counts")
-    public MyPageCountResponseDTO getMyPageCounts(@PathVariable Long userId) {
-        return myPageService.getMyPageCounts(userId);
+    public MyPageCountResponseDTO getMyPageCounts(
+            @PathVariable Long userId,
+            Authentication authentication) {
+        Long authUserId = Long.parseLong(authentication.getName());
+        return myPageService.getMyPageCounts(authUserId);
     }
+
     @GetMapping("/{userId}/my-page/reports")
     public List<MyPageReportItemDTO> getMyReportHistory(
-            @PathVariable Long userId
-    ) {
-        return myPageService.getMyReportHistory(userId);
+            @PathVariable Long userId,
+            Authentication authentication) {
+        Long authUserId = Long.parseLong(authentication.getName());
+        return myPageService.getMyReportHistory(authUserId);
     }
 }

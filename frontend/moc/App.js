@@ -364,24 +364,18 @@ function App() {
       // 🔥 포그라운드 메시지 수신 (앱 실행 중)
       const unsubscribeForeground = messaging().onMessage(
         async remoteMessage => {
-          console.log('[FCM 포그라운드 메시지 수신]', remoteMessage);
-          // 로컬 알림으로 표시
           await displayFCMNotification(remoteMessage);
         },
       );
 
-      // 🔥 백그라운드에서 알림 클릭 (앱 실행됨)
       messaging().onNotificationOpenedApp(remoteMessage => {
-        console.log('[FCM 백그라운드 알림 클릭]', remoteMessage);
         handleNotificationClick(remoteMessage);
       });
 
-      // 🔥 앱이 종료된 상태에서 알림 클릭
       messaging()
         .getInitialNotification()
         .then(remoteMessage => {
           if (remoteMessage) {
-            console.log('[FCM 종료 상태 알림 클릭]', remoteMessage);
             handleNotificationClick(remoteMessage);
           }
         });
@@ -412,9 +406,8 @@ function App() {
         });
       }
 
-      console.log('[알림 클릭 처리 완료]', data);
     } catch (error) {
-      console.error('[알림 클릭 처리 실패]', error);
+      if (__DEV__) console.error('[알림 클릭 처리 실패]', error);
     }
   };
 

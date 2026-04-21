@@ -15,8 +15,8 @@ public interface NoticeService {
     List<NoticeListItemResponseDTO> getNoticeList(NoticeSearchRequestDTO searchDTO);
     NoticeDetailResponseDTO getNoticeDetail(Long noticeId);
 
-    Long createNotice(NoticeSaveRequestDTO requestDTO);
-    void updateNotice(Long noticeId, NoticeSaveRequestDTO requestDTO);
+    Long createNotice(NoticeSaveRequestDTO requestDTO, Long adminUserId);
+    void updateNotice(Long noticeId, NoticeSaveRequestDTO requestDTO, Long adminUserId);
 
     void togglePin(Long noticeId);
 

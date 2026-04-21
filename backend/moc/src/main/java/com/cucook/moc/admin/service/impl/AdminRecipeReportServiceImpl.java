@@ -5,10 +5,14 @@ import com.cucook.moc.admin.dto.request.AdminRecipeReportSearchRequestDTO;
 import com.cucook.moc.admin.dto.response.AdminRecipeReportListItemResponseDTO;
 import com.cucook.moc.admin.service.AdminRecipeReportService;
 import com.cucook.moc.admin.vo.AdminRecipeReportVO;
-import com.cucook.moc.recipe.dao.RecipeReportDAO;
+import com.cucook.moc.recipe.dao.RecipeReportRepository;
+import com.cucook.moc.user.dao.UserRepository;
+import com.cucook.moc.user.vo.UserVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,13 +21,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminRecipeReportServiceImpl implements AdminRecipeReportService {
 
-    private final RecipeReportDAO recipeReportDAO;
+    private final RecipeReportRepository recipeReportRepository;
     private final AdminRecipeReportDAO adminRecipeReportDAO;
+    private final UserRepository userRepository;
+
+    private void requireAdminActive(Long adminUserId) {
+        if (adminUserId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
+        }
+        UserVO admin = userRepository.findById(adminUserId).orElse(null);
+        if (admin == null || !"Y".equalsIgnoreCase(admin.getUserType())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 접근할 수 있습니다.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(admin.getUserStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "비활성 관리자 계정입니다.");
+        }
+    }
 
     @Override
     @Transactional
     public void processRecipeReport(Long recipeReportId, Long adminUserId) {
-        recipeReportDAO.updateRecipeReportStatus(recipeReportId, "APPROVED");
+        requireAdminActive(adminUserId);
+        recipeReportRepository.updateRecipeReportStatus(recipeReportId, "APPROVED");
     }
 
     @Override
@@ -39,7 +58,13 @@ public class AdminRecipeReportServiceImpl implements AdminRecipeReportService {
             searchDTO.setLimit(50);
         }
 
-        List<AdminRecipeReportVO> list = adminRecipeReportDAO.selectRecipeReportList(searchDTO);
+        List<AdminRecipeReportVO> list = adminRecipeReportDAO.selectRecipeReportList(
+                searchDTO.getReasonCd(),
+                searchDTO.getStatusCd(),
+                searchDTO.getKeyword(),
+                searchDTO.getLastRecipeReportId(),
+                searchDTO.getLimit()
+        );
 
         List<AdminRecipeReportListItemResponseDTO> result = new ArrayList<>();
         if (list == null) return result;

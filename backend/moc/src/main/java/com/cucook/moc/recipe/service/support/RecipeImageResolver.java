@@ -1,29 +1,34 @@
 package com.cucook.moc.recipe.service.support;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RecipeImageResolver {
 
-    private static final String BASE_URL =
-            "http://localhost:8090/image/";
+    private final String baseUrl;
+
+    public RecipeImageResolver(
+            @Value("${server.base-url:http://localhost:8090}") String serverBaseUrl) {
+        this.baseUrl = serverBaseUrl + "/image/";
+    }
 
     public String resolveByCategory(String category) {
 
         if (category == null || category.isBlank()) {
-            return BASE_URL + "side_dish.png"; // 안전한 기본값
+            return baseUrl + "side_dish.png";
         }
 
         return switch (category) {
-            case "rice_dish" -> BASE_URL + "rice_dish.jpg";
-            case "noodle" -> BASE_URL + "noodle.jpg";
-            case "soup_stew" -> BASE_URL + "soup_stew.jpg";
-            case "stir_fry" -> BASE_URL + "stir_fry.jpg";
-            case "grill_roast" -> BASE_URL + "grill_roast.png";
-            case "salad" -> BASE_URL + "salad.png";
-            case "side_dish" -> BASE_URL + "side_dish.png";
-            case "dessert_snack" -> BASE_URL + "dessert_snack.png";
-            default -> BASE_URL + "side_dish.png";
+            case "rice_dish" -> baseUrl + "rice_dish.jpg";
+            case "noodle" -> baseUrl + "noodle.jpg";
+            case "soup_stew" -> baseUrl + "soup_stew.jpg";
+            case "stir_fry" -> baseUrl + "stir_fry.jpg";
+            case "grill_roast" -> baseUrl + "grill_roast.png";
+            case "salad" -> baseUrl + "salad.png";
+            case "side_dish" -> baseUrl + "side_dish.png";
+            case "dessert_snack" -> baseUrl + "dessert_snack.png";
+            default -> baseUrl + "side_dish.png";
         };
     }
 }

@@ -7,6 +7,7 @@ import com.cucook.moc.recipe.service.RecipeReportService; // 서비스 주입
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List; // RecipeReportListResponseDTO 내부에서 List 사용
@@ -17,7 +18,6 @@ import java.util.List; // RecipeReportListResponseDTO 내부에서 List 사용
  */
 @RestController
 @RequestMapping("/api/v1/users/{reporterUserId}/recipe-reports")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정 (모든 오리진 허용)
 public class RecipeReportController {
 
     private final RecipeReportService recipeReportService;
@@ -37,18 +37,17 @@ public class RecipeReportController {
      */
     @PostMapping
     public ResponseEntity<RecipeReportResponseDTO> addRecipeReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
-            @RequestBody RecipeReportRequestDTO requestDTO) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @RequestBody RecipeReportRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             RecipeReportResponseDTO response = recipeReportService.addRecipeReport(reporterUserId, requestDTO);
-            return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 신고 추가 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request (존재하지 않는 레시피 ID, 중복 신고 등)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("레시피 신고 추가 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -62,17 +61,17 @@ public class RecipeReportController {
      */
     @GetMapping
     public ResponseEntity<RecipeReportListResponseDTO> getReportedRecipesByReporterUserId(
-            @PathVariable("reporterUserId") Long reporterUserId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             RecipeReportListResponseDTO response = recipeReportService.getReportedRecipesByReporterUserId(reporterUserId);
             if (response.getReportedRecipes().isEmpty()) {
-                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
             }
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("신고된 레시피 목록 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -86,17 +85,16 @@ public class RecipeReportController {
      */
     @GetMapping("/{reportId}")
     public ResponseEntity<RecipeReportResponseDTO> getRecipeReportDetail(
-            @PathVariable("reporterUserId") Long reporterUserId, // ⭐ 요청자 ID (requestingUserId)로 사용
-            @PathVariable("reportId") Long reportId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @PathVariable("reportId") Long reportId,
+            Authentication authentication) {
         try {
-            RecipeReportResponseDTO response = recipeReportService.getRecipeReportDetail(reportId, reporterUserId); // ⭐ requestingUserId로 reporterUserId 전달
+            Long reporterUserId = Long.parseLong(authentication.getName());
+            RecipeReportResponseDTO response = recipeReportService.getRecipeReportDetail(reportId, reporterUserId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 신고 상세 조회 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (신고 없음) 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("레시피 신고 상세 조회 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -112,18 +110,17 @@ public class RecipeReportController {
      */
     @PutMapping("/{reportId}")
     public ResponseEntity<RecipeReportResponseDTO> updateRecipeReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
             @PathVariable("reportId") Long reportId,
-            @RequestBody RecipeReportRequestDTO requestDTO) {
+            @RequestBody RecipeReportRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             RecipeReportResponseDTO response = recipeReportService.updateRecipeReport(reportId, reporterUserId, requestDTO);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 신고 수정 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (신고 없음) 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("레시피 신고 수정 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -138,21 +135,20 @@ public class RecipeReportController {
      */
     @DeleteMapping("/{reportId}")
     public ResponseEntity<Void> deleteRecipeReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
-            @PathVariable("reportId") Long reportId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @PathVariable("reportId") Long reportId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             boolean deleted = recipeReportService.deleteRecipeReport(reportId, reporterUserId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 신고 삭제 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("레시피 신고 삭제 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -167,14 +163,14 @@ public class RecipeReportController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countReportedRecipesByReporterUserId(
-            @PathVariable("reporterUserId") Long reporterUserId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             int count = recipeReportService.countReportedRecipesByReporterUserId(reporterUserId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("신고된 레시피 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

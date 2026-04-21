@@ -1,37 +1,44 @@
 package com.cucook.moc.notice.dao;
 
-import com.cucook.moc.notice.dto.request.NoticeSearchRequestDTO;
 import com.cucook.moc.notice.vo.NoticeVO;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * 공지사항 MyBatis DAO
- */
-@Mapper
-public interface NoticeDAO {
+public interface NoticeDAO extends JpaRepository<NoticeVO, Long> {
 
-    // 공지 목록 (cursor 기반)
-    List<NoticeVO> selectNoticeList(NoticeSearchRequestDTO searchDTO);
+    @Query(value = "SELECT * FROM ( " +
+            "SELECT n.* FROM tb_notice n " +
+            "WHERE n.is_visible = 'Y' " +
+            "AND (:keyword IS NULL OR :keyword = '' " +
+            "  OR LOWER(n.title) LIKE CONCAT('%', LOWER(:keyword), '%') " +
+            "  OR LOWER(n.content) LIKE CONCAT('%', LOWER(:keyword), '%')) " +
+            "AND (:lastNoticeId IS NULL OR n.notice_id < :lastNoticeId) " +
+            "ORDER BY CASE WHEN n.is_pinned = 'Y' THEN 0 ELSE 1 END, n.notice_id DESC " +
+            ") sub LIMIT :limit", nativeQuery = true)
+    List<NoticeVO> selectNoticeList(@Param("keyword") String keyword,
+                                    @Param("lastNoticeId") Long lastNoticeId,
+                                    @Param("limit") int limit);
 
-    // 공지 단건 조회
-    NoticeVO selectNoticeById(@Param("noticeId") Long noticeId);
+    @Modifying
+    @Transactional
+    @Query("UPDATE NoticeVO n SET n.isPinned = :isPinned, n.updatedDate = CURRENT_TIMESTAMP " +
+            "WHERE n.noticeId = :noticeId")
+    void updateNoticePin(@Param("noticeId") Long noticeId, @Param("isPinned") String isPinned);
 
-    // 공지 등록
-    void insertNotice(NoticeVO notice);
-
-    // 공지 수정
-    void updateNotice(NoticeVO notice);
-
-    // 상단 고정 / 해제
-    void updateNoticePin(@Param("noticeId") Long noticeId,
-                         @Param("isPinned") String isPinned);
-
-    // 소프트 삭제 (is_visible = 'N')
+    @Modifying
+    @Transactional
+    @Query("UPDATE NoticeVO n SET n.isVisible = 'N', n.updatedDate = CURRENT_TIMESTAMP " +
+            "WHERE n.noticeId = :noticeId")
     void softDeleteNotice(@Param("noticeId") Long noticeId);
 
-    // 조회수 증가
+    @Modifying
+    @Transactional
+    @Query("UPDATE NoticeVO n SET n.viewCnt = COALESCE(n.viewCnt, 0) + 1 " +
+            "WHERE n.noticeId = :noticeId")
     void increaseViewCount(@Param("noticeId") Long noticeId);
 }

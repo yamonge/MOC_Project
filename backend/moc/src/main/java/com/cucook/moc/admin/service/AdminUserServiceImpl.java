@@ -8,7 +8,7 @@ import com.cucook.moc.admin.dto.request.AdminUserWithdrawRequestDTO;
 import com.cucook.moc.admin.dto.response.AdminUserListItemResponseDTO;
 import com.cucook.moc.admin.dto.response.AdminUserListResponseDTO;
 import com.cucook.moc.admin.vo.AdminUserVO;
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import com.cucook.moc.user.vo.UserVO;
 import lombok.RequiredArgsConstructor;
 
@@ -25,28 +25,20 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * ✅ 구현체 규칙
- * - @RequiredArgsConstructor 사용
- * - 인터페이스 메서드는 전부 @Override 사용
- */
 @Service
 @RequiredArgsConstructor
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final AdminUserDAO adminUserDAO;
-    private final UserDAO userDAO;
+    private final UserRepository userRepository;
 
-    // JoinDate 포맷터
     private static final DateTimeFormatter JOIN_DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy.MM.dd").withZone(ZoneId.systemDefault());
 
-    // 사용자 목록 조회
     @Override
     public AdminUserListResponseDTO getUserList(Long adminUserId, AdminUserSearchRequestDTO request) {
         requireAdminActive(adminUserId);
 
-        // 방어적 기본값
         if (request.getStatus() == null || request.getStatus().trim().isEmpty()) {
             request.setStatus("ALL");
         }
@@ -57,7 +49,12 @@ public class AdminUserServiceImpl implements AdminUserService {
             request.setKeyword(null);
         }
 
-        List<AdminUserVO> voList = adminUserDAO.selectAdminUserList(request);
+        List<AdminUserVO> voList = adminUserDAO.selectAdminUserList(
+                request.getKeyword(),
+                request.getStatus(),
+                request.getLastUserId(),
+                request.getLimit()
+        );
 
         List<AdminUserListItemResponseDTO> items = new ArrayList<>();
         Long nextCursor = null;
@@ -68,13 +65,13 @@ public class AdminUserServiceImpl implements AdminUserService {
             dto.setEmail(vo.getUserEmail());
             dto.setName(vo.getUserName());
             dto.setNickname(vo.getUserNickname());
-            dto.setStatus(vo.getUserStatus()); // ACTIVE/SUSPENDED 그대로
+            dto.setStatus(vo.getUserStatus());
             dto.setReportCount(vo.getReportedCnt() == null ? 0 : vo.getReportedCnt());
             dto.setJoinDate(formatJoinDate(vo.getCreatedDate()));
             dto.setSuspendedUntil(vo.getSuspendedUntil());
 
             items.add(dto);
-            nextCursor = vo.getUserId(); // DESC 정렬이므로 마지막에 남는 값이 다음 cursor로 적합
+            nextCursor = vo.getUserId();
         }
 
         AdminUserListResponseDTO res = new AdminUserListResponseDTO();
@@ -83,7 +80,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         return res;
     }
 
-    // 사용자 정지
     @Override
     public void suspendUser(Long adminUserId, Long targetUserId, AdminUserSuspendRequestDTO request) {
         requireAdminActive(adminUserId);
@@ -120,7 +116,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    // 사용자활성화
     @Override
     public void activateUser(Long adminUserId, Long targetUserId, AdminUserActivateRequestDTO request) {
         requireAdminActive(adminUserId);
@@ -149,8 +144,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-
-    // 사용자 탈퇴 처리
     @Override
     public void withdrawUser(Long adminUserId, Long targetUserId, AdminUserWithdrawRequestDTO request) {
         requireAdminActive(adminUserId);
@@ -163,7 +156,6 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "일반 사용자만 탈퇴 처리할 수 있습니다.");
         }
 
-        // WITHDRAW는 소프트삭제: 목록에서 제외되도록 상태만 변경
         int updated = adminUserDAO.updateUserStatus(
                 targetUserId,
                 "WITHDRAW",
@@ -176,13 +168,13 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "탈퇴 처리에 실패했습니다.");
         }
     }
-    // 관리자 인증 및 활성 상태 검증
+
     private void requireAdminActive(Long adminUserId) {
         if (adminUserId == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
         }
 
-        UserVO admin = userDAO.selectById(adminUserId);
+        UserVO admin = userRepository.findById(adminUserId).orElse(null);
         if (admin == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
         }
@@ -194,7 +186,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    // suspendType에 따른 정지 종료일 계산
     private Timestamp computeSuspendedUntil(String suspendType) {
         String s = suspendType.trim().toUpperCase();
 
@@ -210,7 +201,6 @@ public class AdminUserServiceImpl implements AdminUserService {
             return Timestamp.from(now.plus(7, ChronoUnit.DAYS));
         }
         if ("PERMANENT".equals(s)) {
-            // "영구"는 아주 긴 기간으로 처리 (예: 100년)
             return Timestamp.from(now.plus(36500, ChronoUnit.DAYS));
         }
 

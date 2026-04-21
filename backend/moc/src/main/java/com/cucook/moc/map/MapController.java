@@ -14,7 +14,6 @@ import org.springframework.web.client.RestTemplate;
  */
 @RestController
 @RequestMapping("/api/map")
-@CrossOrigin(origins = "*") // React Native에서 접근 허용
 public class MapController {
 
     @Value("${naver.search.client-id}")

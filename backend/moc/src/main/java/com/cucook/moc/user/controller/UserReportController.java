@@ -7,17 +7,16 @@ import com.cucook.moc.user.service.UserReportService; // 서비스 주입
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import java.util.List; // UserReportListResponseDTO 내부에서 List 사용
+import java.util.List;
 
 /**
  * 사용자 신고(tb_user_report) 기능에 대한 REST API를 처리하는 컨트롤러입니다.
  * 마이페이지의 '신고 내역' 중 사용자 신고 부분을 담당합니다.
  */
-@RestController // RESTful API를 위한 컨트롤러임을 선언
-// ⭐ RequestMapping 경로: 신고하는 사용자(reporterUserId) 기준
+@RestController
 @RequestMapping("/api/v1/users/{reporterUserId}/user-reports")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정 (모든 오리진 허용)
 public class UserReportController {
 
     private final UserReportService userReportService;
@@ -37,18 +36,17 @@ public class UserReportController {
      */
     @PostMapping
     public ResponseEntity<UserReportResponseDTO> addUserReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
-            @RequestBody UserReportRequestDTO requestDTO) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @RequestBody UserReportRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             UserReportResponseDTO response = userReportService.addUserReport(reporterUserId, requestDTO);
-            return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 신고 추가 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request (존재하지 않는 사용자 ID, 중복 신고 등)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("사용자 신고 추가 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -62,17 +60,17 @@ public class UserReportController {
      */
     @GetMapping
     public ResponseEntity<UserReportListResponseDTO> getReportedUsersByReporterUserId(
-            @PathVariable("reporterUserId") Long reporterUserId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             UserReportListResponseDTO response = userReportService.getReportedUsersByReporterUserId(reporterUserId);
             if (response.getReportedUsers().isEmpty()) {
-                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
             }
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("신고된 사용자 목록 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -86,17 +84,16 @@ public class UserReportController {
      */
     @GetMapping("/{reportId}")
     public ResponseEntity<UserReportResponseDTO> getUserReportDetail(
-            @PathVariable("reporterUserId") Long reporterUserId, // ⭐ 요청자 ID (requestingUserId)로 사용
-            @PathVariable("reportId") Long reportId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @PathVariable("reportId") Long reportId,
+            Authentication authentication) {
         try {
-            UserReportResponseDTO response = userReportService.getUserReportDetail(reportId, reporterUserId); // ⭐ requestingUserId로 reporterUserId 전달
+            Long reporterUserId = Long.parseLong(authentication.getName());
+            UserReportResponseDTO response = userReportService.getUserReportDetail(reportId, reporterUserId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 신고 상세 조회 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (신고 없음) 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 신고 상세 조회 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -112,18 +109,17 @@ public class UserReportController {
      */
     @PutMapping("/{reportId}")
     public ResponseEntity<UserReportResponseDTO> updateUserReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
             @PathVariable("reportId") Long reportId,
-            @RequestBody UserReportRequestDTO requestDTO) {
+            @RequestBody UserReportRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             UserReportResponseDTO response = userReportService.updateUserReport(reportId, reporterUserId, requestDTO);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 신고 수정 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (신고 없음) 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 신고 수정 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -138,21 +134,20 @@ public class UserReportController {
      */
     @DeleteMapping("/{reportId}")
     public ResponseEntity<Void> deleteUserReport(
-            @PathVariable("reporterUserId") Long reporterUserId,
-            @PathVariable("reportId") Long reportId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            @PathVariable("reportId") Long reportId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             boolean deleted = userReportService.deleteUserReport(reportId, reporterUserId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 신고 삭제 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 신고 삭제 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -167,14 +162,14 @@ public class UserReportController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countReportedUsersByReporterUserId(
-            @PathVariable("reporterUserId") Long reporterUserId) {
+            @PathVariable("reporterUserId") Long ignoredReporterUserId,
+            Authentication authentication) {
         try {
+            Long reporterUserId = Long.parseLong(authentication.getName());
             int count = userReportService.countReportedUsersByReporterUserId(reporterUserId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("신고된 사용자 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

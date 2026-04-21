@@ -5,11 +5,15 @@ import com.cucook.moc.admin.dto.request.AdminUserReportProcessRequestDTO;
 import com.cucook.moc.admin.dto.request.AdminUserReportSearchRequestDTO;
 import com.cucook.moc.admin.dto.response.AdminUserReportListItemResponseDTO;
 import com.cucook.moc.admin.vo.AdminUserReportVO;
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import com.cucook.moc.user.vo.UserVO;
 import com.cucook.moc.common.FirebaseService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -21,9 +25,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminUserReportServiceImpl implements AdminUserReportService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminUserReportServiceImpl.class);
+
     private final AdminUserReportDAO adminUserReportDAO;
-    private final UserDAO userDAO;
+    private final UserRepository userRepository;
     private final FirebaseService firebaseService;
+
+    private void requireAdminActive(Long adminUserId) {
+        if (adminUserId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
+        }
+        UserVO admin = userRepository.findById(adminUserId).orElse(null);
+        if (admin == null || !"Y".equalsIgnoreCase(admin.getUserType())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 접근할 수 있습니다.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(admin.getUserStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "비활성 관리자 계정입니다.");
+        }
+    }
 
     @Override
     public List<AdminUserReportListItemResponseDTO> getUserReportList(AdminUserReportSearchRequestDTO searchDTO) {
@@ -38,7 +57,13 @@ public class AdminUserReportServiceImpl implements AdminUserReportService {
             searchDTO.setLimit(50);
         }
 
-        List<AdminUserReportVO> list = adminUserReportDAO.selectUserReportList(searchDTO);
+        List<AdminUserReportVO> list = adminUserReportDAO.selectUserReportList(
+                searchDTO.getReasonCd(),
+                searchDTO.getStatusCd(),
+                searchDTO.getKeyword(),
+                searchDTO.getLastUserReportId(),
+                searchDTO.getLimit()
+        );
 
         List<AdminUserReportListItemResponseDTO> result = new ArrayList<>();
         if (list == null) return result;
@@ -69,17 +94,16 @@ public class AdminUserReportServiceImpl implements AdminUserReportService {
         if (requestDTO.getAdminUserId() == null) {
             throw new IllegalArgumentException("adminUserId는 필수입니다.");
         }
+        requireAdminActive(requestDTO.getAdminUserId());
         if (requestDTO.getActionType() == null || requestDTO.getActionType().trim().isEmpty()) {
             throw new IllegalArgumentException("actionType은 필수입니다.");
         }
 
-        // 🔥 1. 신고 정보 조회
         AdminUserReportVO reportVO = adminUserReportDAO.selectUserReportById(requestDTO.getUserReportId());
         if (reportVO == null) {
             throw new IllegalArgumentException("신고 정보를 찾을 수 없습니다: " + requestDTO.getUserReportId());
         }
 
-        // 처리상태는 필터/리스트에 쓰기 좋게 PROCESSED로 통일
         String statusCd = "PROCESSED";
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
@@ -94,27 +118,17 @@ public class AdminUserReportServiceImpl implements AdminUserReportService {
             throw new IllegalStateException("신고 처리 상태 업데이트 실패: " + requestDTO.getUserReportId());
         }
 
-        // 🔥 2. 알림 전송
         try {
             sendReportProcessNotifications(reportVO, requestDTO.getActionType());
         } catch (Exception e) {
-            // 알림 전송 실패해도 신고 처리는 성공으로 처리
-            System.err.println("⚠️ 신고 처리 알림 전송 실패: " + e.getMessage());
+            log.error("신고 처리 알림 전송 실패: {}", e.getMessage());
         }
     }
 
-    /**
-     * 신고 처리 완료 알림 전송
-     * - 피신고자: 경고/정지 조치 알림
-     * - 신고자: 신고 처리 완료 알림
-     */
     private void sendReportProcessNotifications(AdminUserReportVO reportVO, String actionType) {
-        // 피신고자 정보 조회
-        UserVO reportedUser = userDAO.selectById(reportVO.getReportedUserId());
-        // 신고자 정보 조회
-        UserVO reporterUser = userDAO.selectById(reportVO.getReporterUserId());
+        UserVO reportedUser = userRepository.findById(reportVO.getReportedUserId()).orElse(null);
+        UserVO reporterUser = userRepository.findById(reportVO.getReporterUserId()).orElse(null);
 
-        // 🔥 피신고자에게 알림
         if (reportedUser != null && reportedUser.getFcmToken() != null && !reportedUser.getFcmToken().isEmpty()) {
             String title;
             String body;
@@ -140,10 +154,9 @@ public class AdminUserReportServiceImpl implements AdminUserReportService {
                     body,
                     data
             );
-            System.out.println("✅ 피신고자 알림 전송 완료: " + reportedUser.getUserNickname());
+            log.info("피신고자 알림 전송 완료: {}", reportedUser.getUserNickname());
         }
 
-        // 🔥 신고자에게 알림
         if (reporterUser != null && reporterUser.getFcmToken() != null && !reporterUser.getFcmToken().isEmpty()) {
             String title = "✅ 신고 처리 완료";
             String body = "신고하신 사용자에 대한 조치가 완료되었습니다.";
@@ -158,7 +171,7 @@ public class AdminUserReportServiceImpl implements AdminUserReportService {
                     body,
                     data
             );
-            System.out.println("✅ 신고자 알림 전송 완료: " + reporterUser.getUserNickname());
+            log.info("신고자 알림 전송 완료: {}", reporterUser.getUserNickname());
         }
     }
 }

@@ -18,10 +18,7 @@ const formatDateYYYYMMDD = value => {
   }
 };
 
-const withAdminMeta = (config = {}) => ({
-  ...config,
-  meta: {...(config.meta || {}), requiresUserId: true},
-});
+const withAdminMeta = (config = {}) => config;
 
 /** ✅ 로그인한 내 userId를 adminUserId로 사용(업데이트 updated_id 용도) */
 const getMyUserId = async () => {

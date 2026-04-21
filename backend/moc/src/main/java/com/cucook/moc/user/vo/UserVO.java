@@ -1,6 +1,9 @@
 package com.cucook.moc.user.vo;
 
+import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 
@@ -10,46 +13,82 @@ import java.sql.Timestamp;
 @AllArgsConstructor
 @Builder
 @ToString
+@Entity
+@Table(name = "tb_user")
 public class UserVO {
 
-    // PK
-    private Long userId; // NUMBER(19)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long userId;
 
-    // 로그인/계정
-    private String userEmail;      // VARCHAR2(100) NOT NULL
-    private String userName;       // VARCHAR2(50)
-    private String userNickname;   // VARCHAR2(50) NOT NULL
-    private String userPassword;   // VARCHAR2(255) NOT NULL
+    @Column(nullable = false, length = 100)
+    private String userEmail;
 
-    // DDL: user_birth_date DATE NOT NULL
-    // - 프로젝트에서 Timestamp를 쓰시겠다고 하셨으니 Timestamp로 유지합니다.
+    @Column(length = 50)
+    private String userName;
+
+    @Column(nullable = false, length = 50)
+    private String userNickname;
+
+    @Column(nullable = false, length = 255)
+    private String userPassword;
+
+    @Column(nullable = false)
     private Timestamp userBirthDate;
 
-    // 프로필/유형/상태
-    private String userProfileImageUrl; // VARCHAR2(500)
-    private String userType;            // VARCHAR2(1) DEFAULT 'N' NOT NULL
-    private String userStatus;          // VARCHAR2(20) DEFAULT 'ACTIVE' NOT NULL
+    @Column(length = 500)
+    private String userProfileImageUrl;
 
-    // 활동/지표
-    private Integer shoppingParticipatedCnt; // NUMBER DEFAULT 0 NOT NULL
-    private Integer reportedCnt;             // NUMBER(10) DEFAULT 0 NOT NULL
-    private Integer shoppingCompletedCnt;    // NUMBER(10) DEFAULT 0 NOT NULL
-    private Double ratingScore;              // NUMBER(3,2) DEFAULT 0
-    private Double trustScore;               // NUMBER(5,2) DEFAULT 0
+    @Column(nullable = false, length = 1)
+    private String userType;
 
-    // 정지 정보
-    private String suspendedReason;     // VARCHAR2(1000)
-    private Timestamp suspendedUntil;   // TIMESTAMP(6)
+    @Column(nullable = false, length = 20)
+    private String userStatus;
 
-    // 접속/기기
-    private Timestamp lastLoginDate; // TIMESTAMP(6)
-    private String deviceOs;         // VARCHAR2(50)
-    private String deviceVersion;    // VARCHAR2(50)
-    private String fcmToken;         // VARCHAR2(512)
+    @Column(nullable = false)
+    private Integer shoppingParticipatedCnt;
 
-    // 공통 이력
-    private Long createdId;          // NUMBER(19)
-    private Timestamp createdDate;   // TIMESTAMP(6) DEFAULT SYSTIMESTAMP NOT NULL
-    private Long updatedId;          // NUMBER(19)
-    private Timestamp updatedDate;   // TIMESTAMP(6)
+    @Column(nullable = false)
+    private Integer reportedCnt;
+
+    @Column(nullable = false)
+    private Integer shoppingCompletedCnt;
+
+    @Column
+    private Double ratingScore;
+
+    @Column
+    private Double trustScore;
+
+    @Column(length = 1000)
+    private String suspendedReason;
+
+    @Column
+    private Timestamp suspendedUntil;
+
+    @Column
+    private Timestamp lastLoginDate;
+
+    @Column(length = 50)
+    private String deviceOs;
+
+    @Column(length = 50)
+    private String deviceVersion;
+
+    @Column(length = 512)
+    private String fcmToken;
+
+    @Column
+    private Long createdId;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private Timestamp createdDate;
+
+    @Column
+    private Long updatedId;
+
+    @UpdateTimestamp
+    @Column
+    private Timestamp updatedDate;
 }

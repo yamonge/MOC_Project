@@ -1,25 +1,18 @@
 package com.cucook.moc.chat.dto;
 
-import lombok.*;
-
 import java.sql.Timestamp;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@ToString
-public class ChatRoomSummaryDTO {
+/**
+ * 내 채팅방 목록 요약 인터페이스 프로젝션
+ * - 네이티브 쿼리 결과를 Spring Data JPA 인터페이스 프로젝션으로 매핑
+ */
+public interface ChatRoomSummaryDTO {
 
-    private Long chatRoomId;
-    private Long shoppingPostId;
-    private Long hostUserId;         // 방장(게시글 작성자) ID
-    private String placeName;        // 게시글/장소 이름
-
-    private String lastMessage;      // 마지막 메시지
-    private String lastSenderNickname; // 마지막 보낸 사람 닉네임
-    private Integer unreadCount;     // 안 읽은 메시지 수 (선택)
-    private String statusCd;         // OPEN / DONE / CANCELED
-    private Timestamp updatedAt; // 마지막 활동 시간
+    Long getChatRoomId();
+    Long getShoppingPostId();
+    Long getHostUserId();
+    String getPlaceName();
+    String getLastMessage();
+    String getStatusCd();
+    Timestamp getUpdatedAt();
 }

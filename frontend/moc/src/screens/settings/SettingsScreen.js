@@ -26,7 +26,7 @@ import {
 } from 'lucide-react-native';
 import styles from '../../styles/screens/settings/SettingsStyles';
 import {colors} from '../../styles/common/index';
-import {getUserInfo, withdrawUser, checkAdminStatus} from '../../api/settings';
+import {getUserInfo, withdrawUser} from '../../api/settings';
 
 /**
  * 설정 메인 화면

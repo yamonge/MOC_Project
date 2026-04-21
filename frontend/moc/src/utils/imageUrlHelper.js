@@ -1,28 +1,25 @@
-import {Platform} from 'react-native';
-import {SERVER_IP, SERVER_PORT, SERVER_BASE_URL} from '../api/axiosConfig';
+import {SERVER_BASE_URL} from '../api/axiosConfig';
 
 /**
- * 이미지 URL 변환 (ngrok URL 보정)
- * 백엔드에서 반환된 localhost URL을 ngrok URL로 변환
- * 
+ * 이미지 URL 정규화 (개발 환경 폴백용)
+ *
+ * 프로덕션(AWS)에서는 백엔드가 올바른 절대 URL을 반환하므로 이 함수는 그대로 통과시킴.
+ * 개발 환경에서 백엔드가 localhost/사설IP URL을 반환하는 경우에만
+ * .env의 SERVER_BASE_URL로 치환하는 안전장치 역할.
+ *
  * @param {string} imageUrl - 변환할 이미지 URL
  * @returns {string} 변환된 이미지 URL
- * 
- * @example
- * const normalizedUrl = normalizeImageUrl('http://localhost:8090/image.jpg');
- * // 'https://f6aa9ba6797e.ngrok-free.app/image.jpg'
  */
 export const normalizeImageUrl = imageUrl => {
   if (!imageUrl) return imageUrl;
-  
-  // localhost URL을 ngrok URL로 변환
+
   if (imageUrl.includes('localhost:8090') || imageUrl.includes('192.168.')) {
     return imageUrl.replace(
       /https?:\/\/(localhost|192\.168\.\d+\.\d+):8090/,
       SERVER_BASE_URL,
     );
   }
-  
+
   return imageUrl;
 };
 

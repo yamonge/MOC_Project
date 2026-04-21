@@ -6,6 +6,7 @@ import com.cucook.moc.recipe.service.IngredientUseHistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.List;
 // ⭐ RequestMapping 경로: 사용자별 이력을 조회하므로 users/{userId} 하위에 둡니다.
 //    관리자 전용이라면 /api/v1/admin/use-hists 등으로 시작할 수도 있습니다.
 @RequestMapping("/api/v1/users/{userId}/use-hists")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정
 public class IngredientUseHistController {
 
     private final IngredientUseHistService ingredientUseHistService;
@@ -38,17 +38,16 @@ public class IngredientUseHistController {
      */
     @GetMapping
     public ResponseEntity<IngredientUseHistListResponseDTO> getIngredientUseHistsByUserId(
-            @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
         try {
-            // TODO: 실제 구현 시 관리자 권한 확인 로직 추가 (예: @PreAuthorize("hasRole('ADMIN')"))
+            Long userId = Long.parseLong(authentication.getName());
             IngredientUseHistListResponseDTO response = ingredientUseHistService.getIngredientUseHistsByUserId(userId);
             if (response.getUseHists().isEmpty()) {
-                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
             }
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("재료 사용 이력 목록 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -64,15 +63,13 @@ public class IngredientUseHistController {
      */
     @GetMapping("/by-user-ingredient/{userIngredientId}")
     public ResponseEntity<IngredientUseHistListResponseDTO> getIngredientUseHistsByUserIngredientId(
-            @PathVariable("userId") Long userId,
-            @PathVariable("userIngredientId") Long userIngredientId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("userIngredientId") Long userIngredientId,
+            Authentication authentication) {
         try {
-            // TODO: 실제 구현 시 관리자 권한 확인 로직 추가
             IngredientUseHistListResponseDTO response = ingredientUseHistService.getIngredientUseHistsByUserIngredientId(userIngredientId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("특정 사용자 재료 이력 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -88,15 +85,14 @@ public class IngredientUseHistController {
      */
     @GetMapping("/by-recipe/{recipeId}")
     public ResponseEntity<IngredientUseHistListResponseDTO> getIngredientUseHistsByRecipeAndUser(
-            @PathVariable("userId") Long userId,
-            @PathVariable("recipeId") Long recipeId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("recipeId") Long recipeId,
+            Authentication authentication) {
         try {
-            // TODO: 실제 구현 시 관리자 권한 확인 로직 추가
+            Long userId = Long.parseLong(authentication.getName());
             IngredientUseHistListResponseDTO response = ingredientUseHistService.getIngredientUseHistsByRecipeAndUser(userId, recipeId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("레시피별 재료 이력 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -112,22 +108,19 @@ public class IngredientUseHistController {
      */
     @DeleteMapping("/{ingredientUseHistId}")
     public ResponseEntity<Void> deleteIngredientUseHist(
-            @PathVariable("userId") Long userId, // TODO: 실제 구현 시 이 userId를 이력의 소유자 확인 등에 활용
-            @PathVariable("ingredientUseHistId") Long ingredientUseHistId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("ingredientUseHistId") Long ingredientUseHistId,
+            Authentication authentication) {
         try {
-            // TODO: 실제 구현 시 관리자 권한 확인 로직 추가 및 삭제 대상 이력의 userId와 path variable의 userId 일치 여부 확인
             boolean deleted = ingredientUseHistService.deleteIngredientUseHist(ingredientUseHistId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("재료 사용 이력 삭제 중 오류: " + e.getMessage());
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("재료 사용 이력 삭제 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -143,15 +136,14 @@ public class IngredientUseHistController {
      */
     @DeleteMapping("/by-recipe/{recipeId}")
     public ResponseEntity<Integer> deleteIngredientUseHistsByRecipeAndUser(
-            @PathVariable("userId") Long userId,
-            @PathVariable("recipeId") Long recipeId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("recipeId") Long recipeId,
+            Authentication authentication) {
         try {
-            // TODO: 실제 구현 시 관리자 권한 확인 로직 추가
+            Long userId = Long.parseLong(authentication.getName());
             int deletedCount = ingredientUseHistService.deleteIngredientUseHistsByRecipeAndUser(userId, recipeId);
             return new ResponseEntity<>(deletedCount, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("레시피 관련 재료 이력 일괄 삭제 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

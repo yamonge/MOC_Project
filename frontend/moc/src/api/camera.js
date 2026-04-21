@@ -167,11 +167,9 @@ export const saveIngredients = async (userId, ingredientNames) => {
       ingredientNames, // ✅ List<String>
     );
 
-    console.log('✅ 재료 저장 성공:', response.data);
-
     return {
       success: true,
-      ingredients: response.data,
+      ingredients: response,
     };
   } catch (error) {
     console.error('❌ 재료 저장 API 에러:', error);
@@ -225,11 +223,9 @@ export const saveRecipe = async (userId, recipe) => {
       })),
     });
 
-    console.log('✅ 레시피 저장 성공:', response.data);
-
     return {
       success: true,
-      recipeId: response.data, // Long recipeId
+      recipeId: response,
     };
   } catch (error) {
     console.error('❌ 레시피 저장 API 에러:', error);

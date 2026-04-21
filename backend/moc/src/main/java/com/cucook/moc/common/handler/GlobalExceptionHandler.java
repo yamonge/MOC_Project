@@ -1,7 +1,11 @@
 package com.cucook.moc.common.handler;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,6 +20,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * 400 Bad Request: 잘못된 요청
@@ -64,15 +70,29 @@ public class GlobalExceptionHandler {
      * - NullPointerException
      * - 기타 런타임 예외
      */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "접근 권한이 없습니다.");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthentication(AuthenticationException e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", "인증이 필요합니다.");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleServerError(Exception e) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("error", "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         
-        // 개발자를 위한 로그 출력 (운영 환경에서는 로거 사용 권장)
-        System.err.println("[Server Error] " + e.getClass().getName() + ": " + e.getMessage());
-        e.printStackTrace();
+        log.error("[Server Error] {}: {}", e.getClass().getName(), e.getMessage(), e);
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

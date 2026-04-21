@@ -1,11 +1,14 @@
 package com.cucook.moc.shopping.service;
 
+import com.cucook.moc.chat.dao.ChatParticipantDAO;
 import com.cucook.moc.shopping.dao.ShoppingPostJoinDAO;
 import com.cucook.moc.shopping.vo.ShoppingPostVO;
 import com.cucook.moc.chat.service.ShoppingChatRoomService;
 import com.cucook.moc.common.FirebaseService;
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import com.cucook.moc.user.vo.UserVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,8 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ShoppingPostJoinService {
 
+    private static final Logger log = LoggerFactory.getLogger(ShoppingPostJoinService.class);
+
     @Autowired
     private ShoppingPostJoinDAO shoppingPostJoinDAO;
+
+    @Autowired
+    private ChatParticipantDAO chatParticipantDAO;
 
     @Autowired
     private ShoppingChatRoomService shoppingChatRoomService;
@@ -23,13 +31,12 @@ public class ShoppingPostJoinService {
     private FirebaseService firebaseService;
 
     @Autowired
-    private UserDAO userDAO;
+    private UserRepository userRepository;
 
     @Transactional
     public Long joinPost(Long postId, Long userId) {
 
-        // 1) 게시글 조회 (FOR UPDATE)
-        ShoppingPostVO postVO = shoppingPostJoinDAO.selectPostForUpdate(postId);
+        ShoppingPostVO postVO = shoppingPostJoinDAO.selectPostForUpdate(postId).orElse(null);
 
         if (postVO == null) {
             throw new IllegalArgumentException("존재하지 않는 게시글입니다.");
@@ -43,11 +50,16 @@ public class ShoppingPostJoinService {
             throw new IllegalStateException("이미 인원이 마감된 게시글입니다.");
         }
 
+        Long chatRoomIdCheck = shoppingPostJoinDAO.selectChatRoomIdByPostId(postId);
+        if (chatRoomIdCheck != null) {
+            boolean alreadyJoined = chatParticipantDAO.existsByPostAndUser(postId, userId);
+            if (alreadyJoined) {
+                return chatRoomIdCheck;
+            }
+        }
 
-        // 2) 인원 +1
         shoppingPostJoinDAO.increaseCurrentPersonCnt(postId);
 
-        // 3) 채팅방 조회 + 참여
         Long chatRoomId = shoppingPostJoinDAO.selectChatRoomIdByPostId(postId);
         if (chatRoomId == null) {
             throw new IllegalStateException("해당 게시글의 채팅방이 존재하지 않습니다.");
@@ -55,15 +67,10 @@ public class ShoppingPostJoinService {
 
         shoppingChatRoomService.joinRoom(chatRoomId, userId);
 
-        // 4) 🔥 게시글 작성자에게 푸시 알림 전송
         try {
-            // 참여한 사용자 정보 조회
-            UserVO joinUser = userDAO.selectById(userId);
+            UserVO joinUser = userRepository.findById(userId).orElse(null);
+            UserVO writerUser = userRepository.findById(postVO.getWriterUserId()).orElse(null);
             
-            // 게시글 작성자 정보 조회
-            UserVO writerUser = userDAO.selectById(postVO.getWriterUserId());
-            
-            // 작성자가 본인이 아니고, FCM Token이 있는 경우에만 알림 전송
             if (writerUser != null 
                 && !userId.equals(postVO.getWriterUserId())
                 && writerUser.getFcmToken() != null 
@@ -79,7 +86,6 @@ public class ShoppingPostJoinService {
                     postVO.getPlaceName() != null ? postVO.getPlaceName() : "장보기"
                 );
                 
-                // 🔥 Data payload 추가 (화면 이동용)
                 java.util.Map<String, String> data = new java.util.HashMap<>();
                 data.put("chatRoomId", String.valueOf(chatRoomId));
                 data.put("storeName", postVO.getPlaceName() != null ? postVO.getPlaceName() : "장보기");
@@ -92,15 +98,12 @@ public class ShoppingPostJoinService {
                     data
                 );
                 
-                System.out.println("✅ 푸시 알림 전송 완료: " + writerUser.getUserNickname() + "에게 전송 (chatRoomId: " + chatRoomId + ")");
+                log.info("푸시 알림 전송 완료: {}에게 전송 (chatRoomId: {})", writerUser.getUserNickname(), chatRoomId);
             }
         } catch (Exception e) {
-            // 알림 전송 실패해도 참여 로직은 성공으로 처리
-            System.err.println("⚠️ 푸시 알림 전송 실패 (참여는 성공): " + e.getMessage());
+            log.error("푸시 알림 전송 실패 (참여는 성공): {}", e.getMessage());
         }
 
-        // 🔥 프론트에서 바로 이 방으로 입장할 수 있게 roomId 반환
         return chatRoomId;
     }
 }
-

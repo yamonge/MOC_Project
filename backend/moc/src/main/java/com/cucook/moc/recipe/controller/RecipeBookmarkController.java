@@ -7,15 +7,15 @@ import com.cucook.moc.recipe.service.RecipeBookmarkService; // 서비스 주입
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * 사용자 레시피 북마크(저장) 기능에 대한 REST API를 처리하는 컨트롤러입니다.
  * 마이페이지의 '저장된 게시글' 탭 기능을 담당합니다.
  */
-@RestController // RESTful API를 위한 컨트롤러임을 선언
-@RequestMapping("/api/v1/users/{userId}/bookmarks") // 사용자별 북마크 관리를 위한 기본 URL 경로
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정 (모든 오리진 허용)
+@RestController
+@RequestMapping("/api/v1/users/{userId}/bookmarks")
 public class RecipeBookmarkController {
 
     private final RecipeBookmarkService recipeBookmarkService;
@@ -35,19 +35,17 @@ public class RecipeBookmarkController {
      */
     @PostMapping
     public ResponseEntity<RecipeBookmarkResponseDTO> addRecipeBookmark(
-            @PathVariable("userId") Long userId,
-            @RequestBody RecipeBookmarkRequestDTO requestDTO) {
+            @PathVariable("userId") Long ignoredUserId,
+            @RequestBody RecipeBookmarkRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             RecipeBookmarkResponseDTO response = recipeBookmarkService.addRecipeBookmark(userId, requestDTO);
-            // 만약 addRecipeBookmark가 이미 저장된 경우를 처리하여 기존 DTO를 반환한다면 200 OK도 가능
-            return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 북마크 추가 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request (잘못된 레시피 ID 등)
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("레시피 북마크 추가 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -60,11 +58,11 @@ public class RecipeBookmarkController {
      */
     @GetMapping
     public ResponseEntity<RecipeBookmarkListResponseDTO> getBookmarkedRecipes(
-            @PathVariable("userId") Long userId) {
-
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
         RecipeBookmarkListResponseDTO response =
                 recipeBookmarkService.getBookmarkedRecipes(userId);
-
         return ResponseEntity.ok(response);
     }
 
@@ -74,8 +72,9 @@ public class RecipeBookmarkController {
      */
     @GetMapping("/my-public")
     public ResponseEntity<RecipeBookmarkListResponseDTO> getMyPublicRecipes(
-            @PathVariable("userId") Long userId
-    ) {
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
         return ResponseEntity.ok(
                 recipeBookmarkService.getMyPublicRecipes(userId)
         );
@@ -91,22 +90,21 @@ public class RecipeBookmarkController {
      */
     @DeleteMapping("/{recipeId}")
     public ResponseEntity<Void> deleteRecipeBookmark(
-            @PathVariable("userId") Long userId,
-            @PathVariable("recipeId") Long recipeId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("recipeId") Long recipeId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             boolean deleted = recipeBookmarkService.deleteRecipeBookmark(userId, recipeId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("레시피 북마크 삭제 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 403 Forbidden (권한 문제)
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         } catch (Exception e) {
-            System.err.println("레시피 북마크 삭제 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -120,15 +118,15 @@ public class RecipeBookmarkController {
      */
     @GetMapping("/check/{recipeId}")
     public ResponseEntity<Boolean> isRecipeBookmarked(
-            @PathVariable("userId") Long userId,
-            @PathVariable("recipeId") Long recipeId) {
+            @PathVariable("userId") Long ignoredUserId,
+            @PathVariable("recipeId") Long recipeId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             boolean isBookmarked = recipeBookmarkService.isRecipeBookmarked(userId, recipeId);
-            return new ResponseEntity<>(isBookmarked, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(isBookmarked, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("레시피 북마크 상태 확인 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -141,14 +139,14 @@ public class RecipeBookmarkController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countBookmarkedRecipes(
-            @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long ignoredUserId,
+            Authentication authentication) {
         try {
+            Long userId = Long.parseLong(authentication.getName());
             int count = recipeBookmarkService.countBookmarkedRecipes(userId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("북마크 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

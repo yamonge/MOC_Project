@@ -7,6 +7,7 @@ import com.cucook.moc.user.service.UserReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -16,7 +17,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/users/{writerUserId}/reviews")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // 개발용 CORS 설정 (모든 오리진 허용)
 public class UserReviewController {
 
     private final UserReviewService userReviewService;
@@ -36,18 +36,17 @@ public class UserReviewController {
      */
     @PostMapping
     public ResponseEntity<UserReviewResponseDTO> addUserReview(
-            @PathVariable("writerUserId") Long writerUserId,
-            @RequestBody UserReviewRequestDTO requestDTO) {
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
+            @RequestBody UserReviewRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long writerUserId = Long.parseLong(authentication.getName());
             UserReviewResponseDTO response = userReviewService.addUserReview(writerUserId, requestDTO);
-            return new ResponseEntity<>(response, HttpStatus.CREATED); // 201 Created
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 후기 추가 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            System.err.println("사용자 후기 추가 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -62,17 +61,16 @@ public class UserReviewController {
      */
     @GetMapping("/received")
     public ResponseEntity<UserReviewListResponseDTO> getReceivedUserReviews(
-            @PathVariable("writerUserId") Long writerUserId) { // ⭐ 파라미터명 직관적으로 변경 (targetUserId)
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
+            Authentication authentication) {
         try {
-            // Service 메서드의 파라미터는 targetUserId이므로, writerUserId를 targetUserId로 전달
-            UserReviewListResponseDTO response = userReviewService.getReceivedUserReviews(writerUserId);
+            Long userId = Long.parseLong(authentication.getName());
+            UserReviewListResponseDTO response = userReviewService.getReceivedUserReviews(userId);
             if (response.getReceivedReviews().isEmpty()) {
                 return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
             }
-            return new ResponseEntity<>(response, HttpStatus.OK); // 200 OK
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("받은 사용자 후기 목록 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -87,17 +85,16 @@ public class UserReviewController {
      */
     @GetMapping("/{reviewId}")
     public ResponseEntity<UserReviewResponseDTO> getUserReviewDetail(
-            @PathVariable("writerUserId") Long writerUserId, // ⭐ 요청자 ID (requestingUserId)로 사용
-            @PathVariable("reviewId") Long reviewId) {
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
+            @PathVariable("reviewId") Long reviewId,
+            Authentication authentication) {
         try {
-            UserReviewResponseDTO response = userReviewService.getUserReviewDetail(reviewId, writerUserId);
+            Long userId = Long.parseLong(authentication.getName());
+            UserReviewResponseDTO response = userReviewService.getUserReviewDetail(reviewId, userId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 후기 상세 조회 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (후기 없음)
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 후기 상세 조회 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -113,18 +110,17 @@ public class UserReviewController {
      */
     @PutMapping("/{reviewId}")
     public ResponseEntity<UserReviewResponseDTO> updateUserReview(
-            @PathVariable("writerUserId") Long writerUserId,
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
             @PathVariable("reviewId") Long reviewId,
-            @RequestBody UserReviewRequestDTO requestDTO) {
+            @RequestBody UserReviewRequestDTO requestDTO,
+            Authentication authentication) {
         try {
+            Long writerUserId = Long.parseLong(authentication.getName());
             UserReviewResponseDTO response = userReviewService.updateUserReview(reviewId, writerUserId, requestDTO);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 후기 수정 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (후기 없음) 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 후기 수정 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -139,21 +135,20 @@ public class UserReviewController {
      */
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Void> deleteUserReview(
-            @PathVariable("writerUserId") Long writerUserId,
-            @PathVariable("reviewId") Long reviewId) {
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
+            @PathVariable("reviewId") Long reviewId,
+            Authentication authentication) {
         try {
+            Long writerUserId = Long.parseLong(authentication.getName());
             boolean deleted = userReviewService.deleteUserReview(reviewId, writerUserId);
             if (deleted) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204 No Content
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found (삭제할 대상을 찾지 못함)
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("사용자 후기 삭제 중 오류: " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found 또는 403 Forbidden
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            System.err.println("사용자 후기 삭제 중 예상치 못한 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -168,14 +163,13 @@ public class UserReviewController {
      */
     @GetMapping("/count")
     public ResponseEntity<Integer> countReceivedUserReviews(
-            @PathVariable("writerUserId") Long writerUserId) {
+            @PathVariable("writerUserId") Long ignoredWriterUserId,
+            Authentication authentication) {
         try {
-            // Service 메서드의 파라미터는 targetUserId이므로, writerUserId를 targetUserId로 전달
-            int count = userReviewService.countReceivedUserReviews(writerUserId);
-            return new ResponseEntity<>(count, HttpStatus.OK); // 200 OK
+            Long userId = Long.parseLong(authentication.getName());
+            int count = userReviewService.countReceivedUserReviews(userId);
+            return new ResponseEntity<>(count, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("받은 후기 개수 조회 중 오류 발생: " + e.getMessage());
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

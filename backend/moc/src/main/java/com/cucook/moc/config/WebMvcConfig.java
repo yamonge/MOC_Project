@@ -1,5 +1,7 @@
 package com.cucook.moc.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -14,6 +16,8 @@ import java.nio.file.Paths;
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
+
+    private static final Logger log = LoggerFactory.getLogger(WebMvcConfig.class);
 
     private final String uploadDir;
 
@@ -36,7 +40,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         
         String uploadLocation = "file:" + uploadPath.toString().replace("\\", "/") + "/";
         
-        System.out.println("✅ 정적 리소스 핸들러 등록: /uploads/** -> " + uploadLocation);
+        log.info("정적 리소스 핸들러 등록: /uploads/** -> {}", uploadLocation);
         
         // 업로드된 파일 제공 (파일 시스템 경로 사용)
         registry.addResourceHandler("/uploads/**")

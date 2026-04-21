@@ -1,20 +1,47 @@
 package com.cucook.moc.recipe.vo;
 
+import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.sql.Timestamp;
 
 @Data
+@Entity
+@Table(name = "tb_recipe_report")
 public class RecipeReportVO {
 
-    private Long reportId;          // DDL: recipe_report_id NUMBER(19) -> Java Long
-    private Long recipeId;          // DDL: recipe_id NUMBER(19)       -> Java Long
-    private Long reporterUserId;    // DDL: reporter_user_id NUMBER(19) -> Java Long
-    private String reporterNickname; // 신고자 닉네임 (JOIN으로 조회)
-    private String reportReasonCd;  // DDL: report_reason_cd VARCHAR2(20) -> Java String
-    private String content;         // DDL: content VARCHAR2(1000)      -> Java String
-    private String statusCd;        // DDL: status_cd VARCHAR2(20)      -> Java String
-    private Long createdId;         // DDL: created_id NUMBER(19)       -> Java Long
-    private Timestamp createdDate;  // DDL: created_date TIMESTAMP(6)   -> Java Timestamp
-    private Long updatedId;         // DDL: updated_id NUMBER(19)       -> Java Long
-    private Timestamp updatedDate;  // DDL: updated_date TIMESTAMP(6)   -> Java Timestamp
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "recipe_report_id")
+    private Long reportId;
+
+    @Column(nullable = false)
+    private Long recipeId;
+
+    @Column(nullable = false)
+    private Long reporterUserId;
+
+    @Transient
+    private String reporterNickname;
+
+    @Column(length = 20)
+    private String reportReasonCd;
+
+    @Column(length = 1000)
+    private String content;
+
+    @Column(length = 20)
+    private String statusCd;
+
+    private Long createdId;
+
+    @CreationTimestamp
+    private Timestamp createdDate;
+
+    private Long updatedId;
+
+    @UpdateTimestamp
+    private Timestamp updatedDate;
 }

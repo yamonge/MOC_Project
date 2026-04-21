@@ -1,26 +1,53 @@
 package com.cucook.moc.shopping.dao;
 
-import com.cucook.moc.shopping.dto.ShoppingPostDetailDTO;
+import com.cucook.moc.shopping.dto.ShoppingPostDetailProjection;
 import com.cucook.moc.shopping.dto.ShoppingPostSummaryDTO;
 import com.cucook.moc.shopping.vo.ShoppingPostVO;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Mapper
-public interface ShoppingPostDAO {
+public interface ShoppingPostDAO extends JpaRepository<ShoppingPostVO, Long> {
 
-    // 게시글 저장
-    void insertPost(ShoppingPostVO post);
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO tb_shopping_post_category (shopping_post_id, category_cd) " +
+            "VALUES (:shoppingPostId, :categoryCode)", nativeQuery = true)
+    void insertPostCategory(@Param("shoppingPostId") Long shoppingPostId,
+                            @Param("categoryCode") String categoryCode);
 
-    // 게시글 카테고리 저장 (사용할 경우)
-    void insertPostCategory(
-            @Param("shoppingPostId") Long shoppingPostId,
-            @Param("categoryCode") String categoryCode
-    );
-
-    // 반경 내 게시글 목록
+    @Query(value = "SELECT " +
+            "sp.shopping_post_id AS shoppingPostId, " +
+            "sp.place_name AS placeName, " +
+            "sp.place_address AS placeAddress, " +
+            "sp.latitude AS latitude, " +
+            "sp.longitude AS longitude, " +
+            "sp.meet_datetime AS meetDatetime, " +
+            "sp.max_person_cnt AS maxPersonCnt, " +
+            "sp.current_person_cnt AS currentPersonCnt, " +
+            "sp.status_cd AS statusCd, " +
+            "sp.writer_user_id AS writerUserId, " +
+            "u.user_nickname AS writerNickname, " +
+            "sp.created_date AS createdDate, " +
+            "sp.description AS description, " +
+            "( SELECT GROUP_CONCAT(spc.category_cd ORDER BY spc.category_cd) " +
+            "  FROM tb_shopping_post_category spc " +
+            "  WHERE spc.shopping_post_id = sp.shopping_post_id " +
+            ") AS categoryCodesCsv, " +
+            "( 6371000 * ACOS( " +
+            "  COS(RADIANS(:centerLat)) * COS(RADIANS(sp.latitude)) " +
+            "  * COS(RADIANS(sp.longitude) - RADIANS(:centerLng)) " +
+            "  + SIN(RADIANS(:centerLat)) * SIN(RADIANS(sp.latitude)) " +
+            ") ) AS distanceMeters " +
+            "FROM tb_shopping_post sp " +
+            "LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id " +
+            "WHERE sp.latitude BETWEEN :latMin AND :latMax " +
+            "AND sp.longitude BETWEEN :lngMin AND :lngMax " +
+            "ORDER BY sp.created_date DESC", nativeQuery = true)
     List<ShoppingPostSummaryDTO> selectNearbyPosts(
             @Param("centerLat") double centerLat,
             @Param("centerLng") double centerLng,
@@ -29,8 +56,38 @@ public interface ShoppingPostDAO {
             @Param("lngMin") double lngMin,
             @Param("lngMax") double lngMax
     );
-    
-    // ✅ 특정 마트(좌표) 기준으로 글 목록 조회
+
+    @Query(value = "SELECT " +
+            "sp.shopping_post_id AS shoppingPostId, " +
+            "sp.place_name AS placeName, " +
+            "sp.place_address AS placeAddress, " +
+            "sp.latitude AS latitude, " +
+            "sp.longitude AS longitude, " +
+            "sp.meet_datetime AS meetDatetime, " +
+            "sp.max_person_cnt AS maxPersonCnt, " +
+            "sp.current_person_cnt AS currentPersonCnt, " +
+            "sp.status_cd AS statusCd, " +
+            "sp.writer_user_id AS writerUserId, " +
+            "u.user_nickname AS writerNickname, " +
+            "sp.created_date AS createdDate, " +
+            "sp.description AS description, " +
+            "( SELECT GROUP_CONCAT(spc.category_cd ORDER BY spc.category_cd) " +
+            "  FROM tb_shopping_post_category spc " +
+            "  WHERE spc.shopping_post_id = sp.shopping_post_id " +
+            ") AS categoryCodesCsv, " +
+            "0 AS distanceMeters, " +
+            "CASE WHEN EXISTS ( " +
+            "  SELECT 1 FROM tb_shopping_chat_room r " +
+            "  JOIN tb_shopping_participant p ON r.chat_room_id = p.chat_room_id " +
+            "  WHERE r.shopping_post_id = sp.shopping_post_id " +
+            "    AND p.user_id = :userId AND p.leave_date IS NULL " +
+            ") THEN 1 ELSE 0 END AS isParticipated " +
+            "FROM tb_shopping_post sp " +
+            "LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id " +
+            "WHERE sp.latitude BETWEEN :latMin AND :latMax " +
+            "AND sp.longitude BETWEEN :lngMin AND :lngMax " +
+            "AND sp.status_cd = 'OPEN' " +
+            "ORDER BY sp.created_date DESC", nativeQuery = true)
     List<ShoppingPostSummaryDTO> selectPostsByPlace(
             @Param("centerLat") double centerLat,
             @Param("centerLng") double centerLng,
@@ -41,22 +98,42 @@ public interface ShoppingPostDAO {
             @Param("userId") Long userId
     );
 
-    // 상세보기
-    ShoppingPostDetailDTO selectPostDetail(@Param("shoppingPostId") Long shoppingPostId);
+    @Query(value = "SELECT " +
+            "sp.shopping_post_id AS shoppingPostId, " +
+            "sp.writer_user_id AS writerUserId, " +
+            "u.user_nickname AS writerNickname, " +
+            "sp.place_name AS placeName, " +
+            "sp.place_address AS placeAddress, " +
+            "sp.latitude AS latitude, " +
+            "sp.longitude AS longitude, " +
+            "sp.meet_datetime AS meetDatetime, " +
+            "sp.min_person_cnt AS minPersonCnt, " +
+            "sp.max_person_cnt AS maxPersonCnt, " +
+            "sp.current_person_cnt AS currentPersonCnt, " +
+            "sp.status_cd AS statusCd, " +
+            "sp.description AS description " +
+            "FROM tb_shopping_post sp " +
+            "LEFT JOIN tb_user u ON u.user_id = sp.writer_user_id " +
+            "WHERE sp.shopping_post_id = :shoppingPostId", nativeQuery = true)
+    ShoppingPostDetailProjection selectPostDetail(@Param("shoppingPostId") Long shoppingPostId);
 
-    // 카테고리 조회
+    @Query(value = "SELECT category_cd FROM tb_shopping_post_category " +
+            "WHERE shopping_post_id = :shoppingPostId " +
+            "ORDER BY shopping_post_category_id ASC", nativeQuery = true)
     List<String> selectCategoryCodesByPostId(@Param("shoppingPostId") Long shoppingPostId);
 
-    // 리뷰/DONE 체크용: 게시글 단건 조회
-    ShoppingPostVO selectById(@Param("postId") Long postId);
-
-    // 게시글 작성자 조회 (방장 권한 검증용)
+    @Query("SELECT s.writerUserId FROM ShoppingPostVO s WHERE s.shoppingPostId = :postId")
     Long selectOwnerUserId(@Param("postId") Long postId);
 
-    // 게시글 상태 업데이트
+    @Modifying
+    @Transactional
+    @Query("UPDATE ShoppingPostVO s SET s.statusCd = :statusCd, s.updatedDate = CURRENT_TIMESTAMP " +
+            "WHERE s.shoppingPostId = :postId")
     int updateStatus(@Param("postId") Long postId, @Param("statusCd") String statusCd);
 
-    // 만료된 게시글 일괄 업데이트
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE tb_shopping_post SET status_cd = 'DONE', updated_date = CURRENT_TIMESTAMP " +
+            "WHERE meet_datetime < CURRENT_TIMESTAMP AND status_cd = 'OPEN'", nativeQuery = true)
     int bulkUpdateExpiredPosts();
 }
-

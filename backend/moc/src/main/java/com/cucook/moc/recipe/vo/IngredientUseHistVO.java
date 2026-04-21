@@ -1,18 +1,37 @@
 package com.cucook.moc.recipe.vo;
 
+import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.sql.Timestamp;
 
 @Data
+@Entity
+@Table(name = "tb_ingredient_use_hist")
 public class IngredientUseHistVO {
 
-    private Long ingredientUseHistId;   // DDL: ingredient_use_hist_id NUMBER(19) -> Java Long
-    private Long userId;                // DDL: user_id NUMBER(19)          -> Java Long
-    private Long userIngredientId;      // DDL: user_ingredient_id NUMBER(19) -> Java Long
-    private Long recipeId;              // DDL: recipe_id NUMBER(19)       -> Java Long (NULL 허용)
-    private String useTypeCd;           // DDL: use_type_cd VARCHAR2(20)    -> Java String
-    private String useAmountDesc;       // DDL: use_amount_desc VARCHAR2(100) -> Java String
-    private Timestamp usedDate;         // DDL: used_date TIMESTAMP(6)     -> Java Timestamp
-    private Long createdId;             // DDL: created_id NUMBER(19)       -> Java Long
-    private Timestamp createdDate;      // DDL: created_date TIMESTAMP(6)   -> Java Timestamp
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long ingredientUseHistId;
+
+    @Column(nullable = false)
+    private Long userId;
+
+    private Long userIngredientId;
+
+    private Long recipeId;
+
+    @Column(length = 20)
+    private String useTypeCd;
+
+    @Column(length = 100)
+    private String useAmountDesc;
+
+    private Timestamp usedDate;
+
+    private Long createdId;
+
+    @CreationTimestamp
+    private Timestamp createdDate;
 }

@@ -1,5 +1,4 @@
 import api from './axiosConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * 네이버 좌표를 WGS84 위도로 변환
@@ -113,52 +112,31 @@ export const reverseGeocode = async (latitude, longitude) => {
 // 게시물 API
 // ============================================
 
-// userId 자동 첨부(A안)
-const getUserIdOrThrow = async () => {
-  const raw = await AsyncStorage.getItem('userId');
-  if (!raw) throw new Error('userId가 없습니다. 로그인 정보를 확인해주세요.');
-  const userId = Number(raw);
-  if (Number.isNaN(userId)) throw new Error('userId 형식이 올바르지 않습니다.');
-  return userId;
-};
-
 /**
  * 특정 마트(핀) 기준 게시물 조회
- * 백엔드: GET /api/shopping-posts/place?lat=&lng=&userId=
+ * 백엔드: GET /api/shopping-posts/place?lat=&lng=
  */
-// src/api/map.js
 export const getPostsByLocation = async (storeName, latitude, longitude) => {
-  // 🔥 userId 가져오기
-  const userId = await getUserIdOrThrow();
-
-  // storeName은 호환용으로만 받음(요청 params에 넣지 않음)
   return api.get('/shopping-posts/place', {
     params: {
       lat: latitude,
       lng: longitude,
-      userId, // 🔥 userId 추가
     },
   });
 };
 
 /**
  * 게시물 작성
- * 백엔드: POST /api/shopping-posts?userId=
+ * 백엔드: POST /api/shopping-posts
  */
 export const createPost = async postData => {
-  const userId = await getUserIdOrThrow();
-  return api.post('/shopping-posts', postData, {
-    params: {userId},
-  });
+  return api.post('/shopping-posts', postData);
 };
 
 /**
  * 게시물 참여
- * 백엔드: POST /api/shopping-posts/{postId}/join?userId=
+ * 백엔드: POST /api/shopping-posts/{postId}/join
  */
 export const joinPost = async postId => {
-  const userId = await getUserIdOrThrow();
-  return api.post(`/shopping-posts/${postId}/join`, null, {
-    params: {userId},
-  });
+  return api.post(`/shopping-posts/${postId}/join`);
 };

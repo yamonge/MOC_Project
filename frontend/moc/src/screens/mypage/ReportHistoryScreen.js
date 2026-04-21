@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect} from '@react-navigation/native';
-import {getUserIdOrThrow} from '../../api/axiosConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import {ArrowLeft, Shield, AlertTriangle, Star} from 'lucide-react-native';
 import ReportCard from '../../components/mypage/ReportCard';
@@ -87,8 +87,7 @@ export default function ReportHistoryScreen({navigation}) {
     try {
       setLoading(true);
 
-      // ✅ userId 확보
-      const userId = await getUserIdOrThrow();
+      const userId = await AsyncStorage.getItem('userId');
 
       // ✅ axios interceptor 기준: 이미 data
       const list = await getReportHistory(userId);

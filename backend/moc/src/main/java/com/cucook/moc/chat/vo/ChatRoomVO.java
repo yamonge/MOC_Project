@@ -1,6 +1,9 @@
 package com.cucook.moc.chat.vo;
 
+import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 
@@ -10,12 +13,22 @@ import java.sql.Timestamp;
 @AllArgsConstructor
 @Builder
 @ToString
+@Entity
+@Table(name = "tb_shopping_chat_room")
 public class ChatRoomVO {
 
-    private Long chatRoomId;       // tb_shopping_chat_room.chat_room_id
-    private Long shoppingPostId;   // 매핑되는 게시글 ID
-    private String statusCd;       // OPEN / DONE 등
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long chatRoomId;
+
+    private Long shoppingPostId;
+
+    @Column(length = 20)
+    private String statusCd;
+
+    @CreationTimestamp
     private Timestamp createdAt;
+
+    @UpdateTimestamp
     private Timestamp updatedAt;
 }
-

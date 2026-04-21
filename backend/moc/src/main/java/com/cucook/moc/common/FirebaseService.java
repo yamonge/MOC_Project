@@ -6,6 +6,8 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -16,10 +18,12 @@ import java.util.List;
 @Service
 public class FirebaseService {
 
+    private static final Logger log = LoggerFactory.getLogger(FirebaseService.class);
+
     @PostConstruct
     public void initialize() {
         try {
-            System.out.println("🔥 Firebase 초기화 시작...");
+            log.info("Firebase 초기화 시작...");
 
             String firebaseConfigPath = System.getenv("FIREBASE_CONFIG_PATH");
 
@@ -37,7 +41,7 @@ public class FirebaseService {
                              getClass().getClassLoader().getResourceAsStream("firebase-service-account.json")) {
 
                     if (serviceAccount == null) {
-                        System.err.println("❌ firebase-service-account.json not found in resources/firebase/");
+                        log.error("firebase-service-account.json not found in resources/firebase/");
                         return;
                     }
 
@@ -49,10 +53,10 @@ public class FirebaseService {
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("✅ Firebase 초기화 성공!");
+                log.info("Firebase 초기화 성공!");
             }
         } catch (Exception e) {
-            System.err.println("❌ Firebase 초기화 실패: " + e.getMessage());
+            log.error("Firebase 초기화 실패: {}", e.getMessage());
         }
     }
 
@@ -67,9 +71,9 @@ public class FirebaseService {
                     .build();
 
             String response = FirebaseMessaging.getInstance().send(message);
-            System.out.println("✅ 푸시 알림 전송 성공: " + response);
+            log.info("푸시 알림 전송 성공: {}", response);
         } catch (Exception e) {
-            System.err.println("❌ 푸시 알림 전송 실패: " + e.getMessage());
+            log.error("푸시 알림 전송 실패: {}", e.getMessage());
         }
     }
 
@@ -92,9 +96,9 @@ public class FirebaseService {
 
             Message message = messageBuilder.build();
             String response = FirebaseMessaging.getInstance().send(message);
-            System.out.println("✅ 푸시 알림 전송 성공 (with data): " + response);
+            log.info("푸시 알림 전송 성공 (with data): {}", response);
         } catch (Exception e) {
-            System.err.println("❌ 푸시 알림 전송 실패: " + e.getMessage());
+            log.error("푸시 알림 전송 실패: {}", e.getMessage());
         }
     }
 

@@ -1,8 +1,9 @@
 package com.cucook.moc.auth.service;
 
 import com.cucook.moc.auth.dto.FacebookLoginRequestDTO;
+import com.cucook.moc.security.JwtTokenProvider;
 import com.cucook.moc.user.dto.response.LoginResponseDTO;
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import com.cucook.moc.user.vo.UserVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +25,8 @@ import java.sql.Timestamp;
 @Slf4j
 public class FacebookAuthService {
 
-    private final UserDAO userDAO;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -62,7 +64,7 @@ public class FacebookAuthService {
             log.info("✅ Facebook 로그인 시도: email={}, name={}", email, name);
 
             // 2. 이메일로 기존 회원 조회
-            UserVO existingUser = userDAO.findByUserEmail(email);
+            UserVO existingUser = userRepository.findByUserEmail(email);
 
             if (existingUser != null) {
                 // 기존 회원 → 로그인 처리
@@ -70,7 +72,7 @@ public class FacebookAuthService {
                 
                 // FCM 토큰 업데이트
                 if (request.getFcmToken() != null) {
-                    userDAO.updateFcmToken(
+                    userRepository.updateFcmToken(
                             existingUser.getUserId(),
                             request.getFcmToken(),
                             request.getDeviceOs(),
@@ -79,7 +81,7 @@ public class FacebookAuthService {
                 }
                 
                 // 마지막 로그인 시간 갱신
-                userDAO.updateLastLoginDate(existingUser.getUserId());
+                userRepository.updateLastLoginDate(existingUser.getUserId());
 
                 return LoginResponseDTO.builder()
                         .userId(existingUser.getUserId())
@@ -88,9 +90,10 @@ public class FacebookAuthService {
                         .userNickname(existingUser.getUserNickname())
                         .userType(existingUser.getUserType())
                         .userStatus(existingUser.getUserStatus())
+                        .accessToken(jwtTokenProvider.createAccessToken(existingUser.getUserId(), existingUser.getUserType()))
+                        .refreshToken(jwtTokenProvider.createRefreshToken(existingUser.getUserId(), existingUser.getUserType()))
                         .build();
             } else {
-                // 신규 회원 → 자동 회원가입
                 log.info("✅ 신규 회원 자동 가입: email={}", email);
                 
                 UserVO newUser = new UserVO();
@@ -111,7 +114,7 @@ public class FacebookAuthService {
                 newUser.setCreatedDate(new Timestamp(System.currentTimeMillis()));
 
                 // DB에 저장
-                userDAO.insertUser(newUser);
+                userRepository.save(newUser);
 
                 log.info("✅ 페이스북 회원가입 완료: userId={}", newUser.getUserId());
 
@@ -122,6 +125,8 @@ public class FacebookAuthService {
                         .userNickname(newUser.getUserNickname())
                         .userType(newUser.getUserType())
                         .userStatus(newUser.getUserStatus())
+                        .accessToken(jwtTokenProvider.createAccessToken(newUser.getUserId(), newUser.getUserType()))
+                        .refreshToken(jwtTokenProvider.createRefreshToken(newUser.getUserId(), newUser.getUserType()))
                         .build();
             }
 
@@ -140,7 +145,7 @@ public class FacebookAuthService {
         String nickname = baseName;
         int suffix = 1;
 
-        while (userDAO.countByNickname(nickname) > 0) {
+        while (userRepository.existsByUserNickname(nickname)) {
             nickname = baseName + suffix;
             suffix++;
         }

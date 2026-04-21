@@ -1,8 +1,9 @@
 package com.cucook.moc.auth.service;
 
 import com.cucook.moc.auth.dto.GoogleLoginRequestDTO;
+import com.cucook.moc.security.JwtTokenProvider;
 import com.cucook.moc.user.dto.response.LoginResponseDTO;
-import com.cucook.moc.user.dao.UserDAO;
+import com.cucook.moc.user.dao.UserRepository;
 import com.cucook.moc.user.vo.UserVO;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -26,8 +27,9 @@ import java.util.Collections;
 @Slf4j
 public class GoogleAuthService {
 
-    private final UserDAO userDAO;
-    
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+
     private static final String WEB_CLIENT_ID = "1081675491060-ao6tarullgvoga5n4o2pp33ic7c710di.apps.googleusercontent.com";
 
     /**
@@ -61,7 +63,7 @@ public class GoogleAuthService {
             log.info("✅ Google 로그인 시도: email={}, name={}", email, name);
 
             // 2. 이메일로 기존 회원 조회
-            UserVO existingUser = userDAO.findByUserEmail(email);
+            UserVO existingUser = userRepository.findByUserEmail(email);
 
             if (existingUser != null) {
                 // 기존 회원 → 로그인 처리
@@ -69,7 +71,7 @@ public class GoogleAuthService {
                 
                 // FCM 토큰 업데이트
                 if (request.getFcmToken() != null) {
-                    userDAO.updateFcmToken(
+                    userRepository.updateFcmToken(
                             existingUser.getUserId(),
                             request.getFcmToken(),
                             request.getDeviceOs(),
@@ -78,7 +80,7 @@ public class GoogleAuthService {
                 }
                 
                 // 마지막 로그인 시간 갱신
-                userDAO.updateLastLoginDate(existingUser.getUserId());
+                userRepository.updateLastLoginDate(existingUser.getUserId());
 
                 return LoginResponseDTO.builder()
                         .userId(existingUser.getUserId())
@@ -87,9 +89,10 @@ public class GoogleAuthService {
                         .userNickname(existingUser.getUserNickname())
                         .userType(existingUser.getUserType())
                         .userStatus(existingUser.getUserStatus())
+                        .accessToken(jwtTokenProvider.createAccessToken(existingUser.getUserId(), existingUser.getUserType()))
+                        .refreshToken(jwtTokenProvider.createRefreshToken(existingUser.getUserId(), existingUser.getUserType()))
                         .build();
             } else {
-                // 신규 회원 → 자동 회원가입
                 log.info("✅ 신규 회원 자동 가입: email={}", email);
                 
                 UserVO newUser = new UserVO();
@@ -110,7 +113,7 @@ public class GoogleAuthService {
                 newUser.setCreatedDate(new Timestamp(System.currentTimeMillis()));
 
                 // DB에 저장
-                userDAO.insertUser(newUser);
+                userRepository.save(newUser);
 
                 log.info("✅ 구글 회원가입 완료: userId={}", newUser.getUserId());
 
@@ -121,6 +124,8 @@ public class GoogleAuthService {
                         .userNickname(newUser.getUserNickname())
                         .userType(newUser.getUserType())
                         .userStatus(newUser.getUserStatus())
+                        .accessToken(jwtTokenProvider.createAccessToken(newUser.getUserId(), newUser.getUserType()))
+                        .refreshToken(jwtTokenProvider.createRefreshToken(newUser.getUserId(), newUser.getUserType()))
                         .build();
             }
 
@@ -139,7 +144,7 @@ public class GoogleAuthService {
         String nickname = baseName;
         int suffix = 1;
 
-        while (userDAO.countByNickname(nickname) > 0) {
+        while (userRepository.existsByUserNickname(nickname)) {
             nickname = baseName + suffix;
             suffix++;
         }

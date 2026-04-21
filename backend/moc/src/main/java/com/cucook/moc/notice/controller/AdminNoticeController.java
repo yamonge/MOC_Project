@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -50,12 +51,13 @@ public class AdminNoticeController {
     public ResponseEntity<Long> createNotice(
             @RequestPart(value = "title") String title,
             @RequestPart(value = "content") String content,
-            @RequestPart(value = "image", required = false) MultipartFile image
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            Authentication authentication
     ) {
-        // 이미지 파일 처리
+        Long adminUserId = Long.parseLong(authentication.getName());
+
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            // 파일 유효성 검증
             if (!FileUploadUtil.isValidImageFile(image)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 이미지 파일 형식입니다.");
             }
@@ -64,20 +66,18 @@ public class AdminNoticeController {
             }
 
             try {
-                // 파일 저장 후 절대 URL 획득
                 imageUrl = fileUploadUtil.saveNoticeImage(image);
             } catch (IOException e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 저장 실패: " + e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 저장 실패");
             }
         }
 
-        // DTO 생성 및 저장
         NoticeSaveRequestDTO requestDTO = new NoticeSaveRequestDTO();
         requestDTO.setTitle(title);
         requestDTO.setContent(content);
         requestDTO.setImageUrl(imageUrl);
 
-        return ResponseEntity.ok(noticeService.createNotice(requestDTO));
+        return ResponseEntity.ok(noticeService.createNotice(requestDTO, adminUserId));
     }
 
     @PutMapping(value = "/{noticeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -85,12 +85,13 @@ public class AdminNoticeController {
             @PathVariable Long noticeId,
             @RequestPart(value = "title", required = false) String title,
             @RequestPart(value = "content", required = false) String content,
-            @RequestPart(value = "image", required = false) MultipartFile image
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            Authentication authentication
     ) {
-        // 이미지 파일 처리
+        Long adminUserId = Long.parseLong(authentication.getName());
+
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            // 파일 유효성 검증
             if (!FileUploadUtil.isValidImageFile(image)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 이미지 파일 형식입니다.");
             }
@@ -99,20 +100,18 @@ public class AdminNoticeController {
             }
 
             try {
-                // 파일 저장 후 절대 URL 획득
                 imageUrl = fileUploadUtil.saveNoticeImage(image);
             } catch (IOException e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 저장 실패: " + e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 저장 실패");
             }
         }
 
-        // DTO 생성 및 업데이트
         NoticeSaveRequestDTO requestDTO = new NoticeSaveRequestDTO();
         requestDTO.setTitle(title);
         requestDTO.setContent(content);
         requestDTO.setImageUrl(imageUrl);
 
-        noticeService.updateNotice(noticeId, requestDTO);
+        noticeService.updateNotice(noticeId, requestDTO, adminUserId);
         return ResponseEntity.ok().build();
     }
 

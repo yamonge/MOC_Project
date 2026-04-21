@@ -12,9 +12,7 @@ import {normalizeImageUrl} from '../utils/imageUrlHelper';
  */
 export const getUserInfo = async () => {
   try {
-    const response = await api.get('/users/me', {
-      meta: {requiresUserId: true},
-    });
+    const response = await api.get('/users/me');
 
     // 프로필 이미지 URL 변환
     if (response.profileImage) {
@@ -87,7 +85,6 @@ export const updateProfile = async profileData => {
       form.append('profileImage', file);
 
       const response = await api.put('/users/profile', form, {
-        meta: {requiresUserId: true},
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -102,9 +99,7 @@ export const updateProfile = async profileData => {
     }
 
     // 로컬 이미지가 아닌 경우(이미 업로드된 URL 또는 null)는 JSON으로 전송
-    const response = await api.put('/users/profile', profileData, {
-      meta: {requiresUserId: true},
-    });
+    const response = await api.put('/users/profile', profileData);
 
     // 프로필 이미지 URL 변환
     if (response.profileImage) {
@@ -127,9 +122,7 @@ export const updateProfile = async profileData => {
  */
 export const changePassword = async passwordData => {
   try {
-    const response = await api.put('/users/password', passwordData, {
-      meta: {requiresUserId: true},
-    });
+    const response = await api.put('/users/password', passwordData);
     return response;
   } catch (error) {
     console.error('비밀번호 변경 실패:', error);
@@ -144,7 +137,7 @@ export const changePassword = async passwordData => {
 export const getNotificationSettings = async () => {
   try {
     const response = await api.get('/users/notification-settings');
-    return response.data;
+    return response;
   } catch (error) {
     console.error('알림 설정 조회 실패:', error);
     throw error;
@@ -159,7 +152,7 @@ export const getNotificationSettings = async () => {
 export const updateNotificationSettings = async settings => {
   try {
     const response = await api.put('/users/notification-settings', settings);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('알림 설정 업데이트 실패:', error);
     throw error;
@@ -172,9 +165,7 @@ export const updateNotificationSettings = async settings => {
  */
 export const withdrawUser = async () => {
   try {
-    const response = await api.delete('/users/withdraw', {
-      meta: {requiresUserId: true},
-    });
+    const response = await api.delete('/users/withdraw');
 
     // AsyncStorage 로그인 정보 정리
     await AsyncStorage.multiRemove([
@@ -236,7 +227,7 @@ export const uploadImage = async imageUri => {
       },
     });
 
-    return response.data;
+    return response;
   } catch (error) {
     console.error('이미지 업로드 실패:', error);
     throw error;

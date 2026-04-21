@@ -7,28 +7,36 @@ import com.cucook.moc.admin.dto.response.AdminRecipeListItemResponseDTO;
 import com.cucook.moc.admin.dto.response.AdminRecipeListResponseDTO;
 import com.cucook.moc.admin.vo.AdminRecipeVO;
 import com.cucook.moc.admin.vo.AdminUserVO;
+import com.cucook.moc.user.dao.UserRepository;
+import com.cucook.moc.user.vo.UserVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 관리자 레시피(게시글) 관리 비즈니스 로직 구현체
- */
 @Service
 @RequiredArgsConstructor
 public class AdminRecipeServiceImpl implements AdminRecipeService {
 
     private final AdminRecipeDAO adminRecipeDAO;
     private final AdminUserDAO adminUserDAO;
+    private final UserRepository userRepository;
 
     private void assertAdmin(Long adminUserId) {
-        AdminUserVO admin = adminUserDAO.selectAdminUserById(adminUserId);
-        if (admin == null || !"Y".equals(admin.getUserType())) {
-            throw new IllegalArgumentException("관리자 권한이 없습니다.");
+        if (adminUserId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
+        }
+        UserVO admin = userRepository.findById(adminUserId).orElse(null);
+        if (admin == null || !"Y".equalsIgnoreCase(admin.getUserType())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 접근할 수 있습니다.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(admin.getUserStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "비활성 관리자 계정입니다.");
         }
     }
 
@@ -36,20 +44,20 @@ public class AdminRecipeServiceImpl implements AdminRecipeService {
     public AdminRecipeListResponseDTO getRecipeList(Long adminUserId, AdminRecipeSearchRequestDTO searchDTO) {
         assertAdmin(adminUserId);
 
-        // status 정규화: all -> null 처리(쿼리에서 조건 제외)
+        String status = null;
+        String search = null;
+
         if (searchDTO != null && searchDTO.getStatus() != null) {
             String st = searchDTO.getStatus().trim().toLowerCase();
-            if (st.isEmpty() || "all".equals(st)) searchDTO.setStatus(null);
-            else searchDTO.setStatus(st);
+            if (!st.isEmpty() && !"all".equals(st)) status = st;
         }
 
-        // search trim
         if (searchDTO != null && searchDTO.getSearch() != null) {
             String kw = searchDTO.getSearch().trim();
-            searchDTO.setSearch(kw.isEmpty() ? null : kw);
+            if (!kw.isEmpty()) search = kw;
         }
 
-        List<AdminRecipeVO> voList = adminRecipeDAO.selectAdminRecipeList(searchDTO);
+        List<AdminRecipeVO> voList = adminRecipeDAO.selectAdminRecipeList(status, search);
         List<AdminRecipeListItemResponseDTO> posts = new ArrayList<>();
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd");
