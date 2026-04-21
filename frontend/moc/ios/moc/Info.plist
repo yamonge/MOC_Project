@@ -56,20 +56,20 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>fbYOUR_FACEBOOK_APP_ID</string>
+				<string>fb792782273821780</string>
 			</array>
 			<key>CFBundleURLName</key>
 			<string>facebook</string>
 		</dict>
 	</array>
 	<key>FacebookAppID</key>
-	<string>YOUR_FACEBOOK_APP_ID</string>
+	<string>792782273821780</string>
 	<key>FacebookClientToken</key>
-	<string>YOUR_FACEBOOK_CLIENT_TOKEN</string>
+	<string>f6992e15a9557ef1e82862613b88ca50</string>
 	<key>FacebookDisplayName</key>
 	<string>MOC</string>
 	<key>NMFClientId</key>
-	<string>YOUR_NAVER_MAP_CLIENT_ID</string>
+	<string>28n51run07</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

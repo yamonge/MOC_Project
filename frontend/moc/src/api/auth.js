@@ -4,7 +4,7 @@ import messaging from '@react-native-firebase/messaging';
 import {Platform} from 'react-native';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
-import Config from 'react-native-config';
+import {GOOGLE_WEB_CLIENT_ID} from '@env';
 
 /**
  * FCM 토큰 가져오기
@@ -24,7 +24,7 @@ const getFCMToken = async () => {
  */
 export const initGoogleSignIn = () => {
   GoogleSignin.configure({
-    webClientId: Config.GOOGLE_WEB_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
     offlineAccess: true,
     forceCodeForRefreshToken: true,
   });

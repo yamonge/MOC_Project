@@ -30,10 +30,10 @@ public class UserVO {
     @Column(nullable = false, length = 50)
     private String userNickname;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String userPassword;
 
-    @Column(nullable = false)
+    @Column
     private Timestamp userBirthDate;
 
     @Column(length = 500)
@@ -46,19 +46,24 @@ public class UserVO {
     private String userStatus;
 
     @Column(nullable = false)
-    private Integer shoppingParticipatedCnt;
+    @Builder.Default
+    private Integer shoppingParticipatedCnt = 0;
 
     @Column(nullable = false)
-    private Integer reportedCnt;
+    @Builder.Default
+    private Integer reportedCnt = 0;
 
     @Column(nullable = false)
-    private Integer shoppingCompletedCnt;
+    @Builder.Default
+    private Integer shoppingCompletedCnt = 0;
 
     @Column
-    private Double ratingScore;
+    @Builder.Default
+    private Double ratingScore = 0.0;
 
     @Column
-    private Double trustScore;
+    @Builder.Default
+    private Double trustScore = 100.0;
 
     @Column(length = 1000)
     private String suspendedReason;

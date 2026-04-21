@@ -1,7 +1,16 @@
 module.exports = api => {
   const isProduction = api.env('production');
 
-  const plugins = ['react-native-reanimated/plugin'];
+  const plugins = [
+    ['module:react-native-dotenv', {
+      envName: 'APP_ENV',
+      moduleName: '@env',
+      path: '.env',
+      safe: false,
+      allowUndefined: true,
+    }],
+    'react-native-reanimated/plugin',
+  ];
 
   if (isProduction) {
     plugins.unshift('transform-remove-console');

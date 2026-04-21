@@ -25,16 +25,16 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
             int offset, int limit) {
 
         StringBuilder sql = new StringBuilder(
-                "SELECT r.recipe_id, r.title, r.summary, r.thumbnail_url, " +
-                "r.difficulty_cd, r.cook_time_min, r.cuisine_style_cd, r.category, " +
-                "r.view_cnt, r.like_cnt, r.created_date, r.owner_user_id, " +
-                "u.user_nickname, u.user_profile_image_url, " +
+                "SELECT r.recipeId, r.title, r.summary, r.thumbnailUrl, " +
+                "r.difficultyCd, r.cookTimeMin, r.cuisineStyleCd, r.category, " +
+                "r.viewCnt, r.likeCnt, r.createdDate, r.ownerUserId, " +
+                "u.userNickname, u.userProfileImageUrl, " +
                 "CASE WHEN EXISTS (" +
-                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipe_id = r.recipe_id AND l.user_id = :loginUserId" +
+                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipeId = r.recipeId AND l.userId = :loginUserId" +
                 ") THEN 1 ELSE 0 END AS liked_by_me " +
                 "FROM tb_recipe r " +
-                "JOIN tb_user u ON u.user_id = r.owner_user_id " +
-                "WHERE r.is_public = 'Y' AND r.is_deleted = 'N' ");
+                "JOIN tb_user u ON u.userId = r.ownerUserId " +
+                "WHERE r.isPublic = 'Y' AND r.isDeleted = 'N' ");
 
         appendSearchFilter(sql, search, false);
         appendCommonFilters(sql, cuisineStyleCd, difficultyCd, maxCookTimeMin);
@@ -59,7 +59,7 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
 
         StringBuilder sql = new StringBuilder(
                 "SELECT COUNT(*) FROM tb_recipe r " +
-                "WHERE r.is_public = 'Y' AND r.is_deleted = 'N' ");
+                "WHERE r.isPublic = 'Y' AND r.isDeleted = 'N' ");
 
         appendSearchFilter(sql, search, false);
         appendCommonFilters(sql, cuisineStyleCd, difficultyCd, maxCookTimeMin);
@@ -74,18 +74,18 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
     @Override
     public RecipeVO findPublicRecipeById(Long recipeId, Long loginUserId) {
         String sql =
-                "SELECT r.recipe_id, r.owner_user_id, r.source_type, r.external_ref_id, " +
-                "r.title, r.summary, r.thumbnail_url, r.difficulty_cd, r.cook_time_min, " +
-                "r.cuisine_style_cd, r.category, r.is_public, r.is_deleted, " +
-                "r.view_cnt, r.like_cnt, r.report_cnt, " +
-                "r.created_id, r.created_date, r.updated_id, r.updated_date, " +
-                "u.user_nickname, u.user_profile_image_url, " +
+                "SELECT r.recipeId, r.ownerUserId, r.sourceType, r.externalRefId, " +
+                "r.title, r.summary, r.thumbnailUrl, r.difficultyCd, r.cookTimeMin, " +
+                "r.cuisineStyleCd, r.category, r.isPublic, r.isDeleted, " +
+                "r.viewCnt, r.likeCnt, r.reportCnt, " +
+                "r.createdId, r.createdDate, r.updatedId, r.updatedDate, " +
+                "u.userNickname, u.userProfileImageUrl, " +
                 "CASE WHEN EXISTS (" +
-                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipe_id = r.recipe_id AND l.user_id = :loginUserId" +
+                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipeId = r.recipeId AND l.userId = :loginUserId" +
                 ") THEN 1 ELSE 0 END AS liked_by_me " +
                 "FROM tb_recipe r " +
-                "JOIN tb_user u ON u.user_id = r.owner_user_id " +
-                "WHERE r.recipe_id = :recipeId AND r.is_public = 'Y' AND r.is_deleted = 'N'";
+                "JOIN tb_user u ON u.userId = r.ownerUserId " +
+                "WHERE r.recipeId = :recipeId AND r.isPublic = 'Y' AND r.isDeleted = 'N'";
 
         Query query = em.createNativeQuery(sql);
         query.setParameter("recipeId", recipeId);
@@ -124,29 +124,29 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
             int offset, int limit) {
 
         StringBuilder sql = new StringBuilder(
-                "SELECT r.recipe_id, r.title, r.summary, r.thumbnail_url, " +
-                "r.difficulty_cd, r.cook_time_min, r.cuisine_style_cd, r.category, " +
-                "r.view_cnt, r.like_cnt, r.created_date, r.owner_user_id, " +
-                "u.user_nickname, u.user_profile_image_url, " +
+                "SELECT r.recipeId, r.title, r.summary, r.thumbnailUrl, " +
+                "r.difficultyCd, r.cookTimeMin, r.cuisineStyleCd, r.category, " +
+                "r.viewCnt, r.likeCnt, r.createdDate, r.ownerUserId, " +
+                "u.userNickname, u.userProfileImageUrl, " +
                 "CASE WHEN EXISTS (" +
-                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipe_id = r.recipe_id AND l.user_id = :loginUserId" +
+                "  SELECT 1 FROM tb_recipe_like l WHERE l.recipeId = r.recipeId AND l.userId = :loginUserId" +
                 ") THEN 1 ELSE 0 END AS liked_by_me, " +
                 "GROUP_CONCAT(" +
-                "  CONCAT(i.ingredient_name, '::', COALESCE(i.quantity_desc, '')) " +
-                "  ORDER BY i.recipe_ingredient_id SEPARATOR '||'" +
+                "  CONCAT(i.ingredientName, '::', COALESCE(i.quantityDesc, '')) " +
+                "  ORDER BY i.recipeIngredientId SEPARATOR '||'" +
                 ") AS ingredients_string " +
                 "FROM tb_recipe r " +
-                "JOIN tb_user u ON u.user_id = r.owner_user_id " +
-                "LEFT JOIN tb_recipe_ingredient i ON i.recipe_id = r.recipe_id " +
-                "WHERE r.is_public = 'Y' AND r.is_deleted = 'N' ");
+                "JOIN tb_user u ON u.userId = r.ownerUserId " +
+                "LEFT JOIN tb_recipe_ingredient i ON i.recipeId = r.recipeId " +
+                "WHERE r.isPublic = 'Y' AND r.isDeleted = 'N' ");
 
         appendSearchFilter(sql, search, true);
         appendCommonFilters(sql, cuisineStyleCd, difficultyCd, maxCookTimeMin);
 
-        sql.append("GROUP BY r.recipe_id, r.title, r.summary, r.thumbnail_url, " +
-                "r.difficulty_cd, r.cook_time_min, r.cuisine_style_cd, r.category, " +
-                "r.view_cnt, r.like_cnt, r.created_date, r.owner_user_id, " +
-                "u.user_nickname, u.user_profile_image_url ");
+        sql.append("GROUP BY r.recipeId, r.title, r.summary, r.thumbnailUrl, " +
+                "r.difficultyCd, r.cookTimeMin, r.cuisineStyleCd, r.category, " +
+                "r.viewCnt, r.likeCnt, r.createdDate, r.ownerUserId, " +
+                "u.userNickname, u.userProfileImageUrl ");
 
         appendSortOrder(sql, sort);
         sql.append("LIMIT :limit OFFSET :offset ");
@@ -174,7 +174,7 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
             sql.append("AND (LOWER(r.title) LIKE CONCAT('%', LOWER(:search), '%') ");
             sql.append("  OR LOWER(r.summary) LIKE CONCAT('%', LOWER(:search), '%') ");
             if (includeIngredient) {
-                sql.append("  OR LOWER(i.ingredient_name) LIKE CONCAT('%', LOWER(:search), '%') ");
+                sql.append("  OR LOWER(i.ingredientName) LIKE CONCAT('%', LOWER(:search), '%') ");
             }
             sql.append(") ");
         }
@@ -183,21 +183,21 @@ public class RecipeBoardRepositoryImpl implements RecipeBoardRepositoryCustom {
     private void appendCommonFilters(StringBuilder sql, String cuisineStyleCd,
                                      String difficultyCd, Integer maxCookTimeMin) {
         if (cuisineStyleCd != null && !cuisineStyleCd.isEmpty()) {
-            sql.append("AND r.cuisine_style_cd = :cuisineStyleCd ");
+            sql.append("AND r.cuisineStyleCd = :cuisineStyleCd ");
         }
         if (difficultyCd != null && !difficultyCd.isEmpty()) {
-            sql.append("AND r.difficulty_cd = :difficultyCd ");
+            sql.append("AND r.difficultyCd = :difficultyCd ");
         }
         if (maxCookTimeMin != null) {
-            sql.append("AND r.cook_time_min <= :maxCookTimeMin ");
+            sql.append("AND r.cookTimeMin <= :maxCookTimeMin ");
         }
     }
 
     private void appendSortOrder(StringBuilder sql, String sort) {
         if ("POPULAR".equals(sort)) {
-            sql.append("ORDER BY r.like_cnt DESC, r.view_cnt DESC, r.created_date DESC ");
+            sql.append("ORDER BY r.likeCnt DESC, r.viewCnt DESC, r.createdDate DESC ");
         } else {
-            sql.append("ORDER BY r.created_date DESC ");
+            sql.append("ORDER BY r.createdDate DESC ");
         }
     }
 

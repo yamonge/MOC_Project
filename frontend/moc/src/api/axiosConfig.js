@@ -1,11 +1,11 @@
 import axios from 'axios';
 import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Config from 'react-native-config';
+import {SERVER_IP as ENV_SERVER_IP, SERVER_BASE_URL as ENV_SERVER_BASE_URL} from '@env';
 
-export const SERVER_IP = Config.SERVER_IP || 'localhost:8090';
+export const SERVER_IP = ENV_SERVER_IP || 'localhost:8090';
 export const SERVER_PORT = '';
-export const SERVER_BASE_URL = Config.SERVER_BASE_URL || `https://${SERVER_IP}`;
+export const SERVER_BASE_URL = ENV_SERVER_BASE_URL || `http://${SERVER_IP}`;
 
 const BASE_URL = `${SERVER_BASE_URL}/api`;
 
